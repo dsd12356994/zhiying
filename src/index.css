@@ -1,0 +1,321 @@
+@import "tailwindcss";
+
+/* =============================================================================
+   Design Tokens
+   ============================================================================= */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* — Background — */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f7;
+  --bg-tertiary: #eaeaea;
+
+  /* — Text — */
+  --text-primary: #1e1e2f;
+  --text-secondary: #6c6c7a;
+
+  /* — Accent & Border — */
+  --accent: #0066ff;
+  --border: #e0e0e0;
+
+  /* — Elevation — */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+
+  /* — Radius — */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* — Extended semantic tokens (component layer) — */
+  --bg-elev: var(--bg-primary);
+  --bg-layer-2: color-mix(in srgb, var(--bg-secondary) 50%, var(--bg-tertiary));
+  --bg-layer-3: var(--bg-tertiary);
+  --bg-hover: var(--bg-tertiary);
+  --bg-selected: color-mix(in srgb, var(--accent) 12%, var(--bg-secondary));
+  --bg-track: var(--bg-secondary);
+  --bg-timeline: color-mix(in srgb, var(--bg-secondary) 70%, var(--bg-tertiary));
+
+  --text-tertiary: color-mix(in srgb, var(--text-primary) 30%, var(--text-secondary));
+  --text-muted: color-mix(in srgb, var(--text-secondary) 60%, var(--bg-primary));
+
+  --border-strong: color-mix(in srgb, var(--border) 50%, var(--text-secondary));
+
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --accent-fg: var(--bg-primary);
+
+  --preview-grid: color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* — Background — */
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #242424;
+  --bg-tertiary: #2e2e2e;
+
+  /* — Text — */
+  --text-primary: #e0e0e0;
+  --text-secondary: #a0a0a0;
+
+  /* — Accent & Border — */
+  --accent: #4d9fff;
+  --border: #3a3a3a;
+
+  /* — Elevation — */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+
+  /* — Extended semantic tokens — */
+  --bg-elev: #2a2a2a;
+  --bg-layer-2: #282828;
+  --bg-layer-3: #2e2e2e;
+  --bg-hover: #333333;
+  --bg-selected: color-mix(in srgb, var(--accent) 20%, var(--bg-secondary));
+  --bg-track: #1e1e1e;
+  --bg-timeline: #161616;
+
+  --text-tertiary: #808080;
+  --text-muted: #666666;
+
+  --border-strong: #4a4a4a;
+
+  --accent-soft: color-mix(in srgb, var(--accent) 20%, transparent);
+  --accent-fg: #ffffff;
+
+  --preview-grid: color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+/* =============================================================================
+   Tailwind Theme Bridge
+   Maps design tokens → existing utility class names (bg-bg-1, text-fg, etc.)
+   ============================================================================= */
+
+@theme {
+  --color-bg: var(--bg-primary);
+  --color-bg-1: var(--bg-secondary);
+  --color-bg-2: var(--bg-layer-2);
+  --color-bg-3: var(--bg-layer-3);
+  --color-bg-elev: var(--bg-elev);
+  --color-fg: var(--text-primary);
+  --color-fg-2: var(--text-secondary);
+  --color-fg-3: var(--text-tertiary);
+  --color-fg-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-hover: var(--bg-hover);
+  --color-selected: var(--bg-selected);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+  --color-track-bg: var(--bg-track);
+  --color-tl-bg: var(--bg-timeline);
+  --color-primary: var(--bg-primary);
+  --color-secondary: var(--bg-secondary);
+  --color-tertiary: var(--bg-tertiary);
+  --color-strong: var(--border-strong);}
+
+/* =============================================================================
+   Base Styles
+   ============================================================================= */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  height: 100%;
+}
+
+/* =============================================================================
+   Scrollbar
+   ============================================================================= */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-secondary) var(--bg-tertiary);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* =============================================================================
+   Utilities
+   ============================================================================= */
+
+.resize-handle {
+  position: relative;
+}
+
+.resize-handle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.resize-handle-x {
+  cursor: col-resize;
+}
+
+.resize-handle-y {
+  cursor: row-resize;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease;
+}
+
+/* =============================================================================
+   Tech UI — Cards, Buttons, Timeline, Preview
+   ============================================================================= */
+
+.tech-card {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease;
+}
+
+.tech-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.tech-card-interactive {
+  cursor: pointer;
+}
+
+.tool-btn {
+  background-color: transparent;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.tool-btn:hover {
+  background-color: var(--bg-tertiary);
+  transform: scale(1.02);
+}
+
+.timeline-clip {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.timeline-clip:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.timeline-clip--selected {
+  border: 2px solid var(--accent);
+  box-shadow: var(--shadow-md);
+}
+
+.preview-checkerboard {
+  background-color: var(--bg-tertiary);
+  background-image:
+    linear-gradient(
+      45deg,
+      var(--preview-grid) 25%,
+      transparent 25%,
+      transparent 75%,
+      var(--preview-grid) 75%
+    ),
+    linear-gradient(
+      45deg,
+      var(--preview-grid) 25%,
+      transparent 25%,
+      transparent 75%,
+      var(--preview-grid) 75%
+    );
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+}
+
+.preview-controls {
+  background-color: color-mix(in srgb, var(--bg-secondary) 85%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+}
+
+/* =============================================================================
+   Component Interaction States
+   ============================================================================= */
+
+.theme-toggle-btn {
+  background-color: transparent;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+  background-color: var(--bg-tertiary);
+  transform: scale(1.02);
+}
+
+.flow-close-btn:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.chat-close-btn:hover {
+  color: var(--text-primary);
+}
+
+.chat-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.chat-input:focus {
+  border-color: var(--accent);
+}
+
+.flow-tab-btn:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.resize-handle:hover {
+  background-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
