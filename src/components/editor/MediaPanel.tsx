@@ -1,7 +1,8 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Upload, Film, Music, Image as ImageIcon, FileText, Trash2 } from "lucide-react";
 import { useProjectStore } from "../../stores/project-store";
 import { useEditorStore } from "../../stores/editor-store";
+import { useSettingsStore } from "../../stores/settings-store";
 import type { MediaItem } from "../../stores/types";
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -10,23 +11,42 @@ const typeIcons: Record<string, React.ReactNode> = {
   image: <ImageIcon size={16} className="text-yellow-400" />,
 };
 
-const typeLabels: Record<string, string> = {
-  video: "视频",
-  audio: "音频",
-  image: "图片",
-};
-
 export function MediaPanel() {
   const inputRef = useRef<HTMLInputElement>(null);
   const { project, addMedia, removeMedia } = useProjectStore();
+  const language = useSettingsStore((s) => s.language);
+  const text =
+    language === "en"
+      ? {
+          title: "Media",
+          importing: "Importing",
+          items: "items",
+          emptyHint: "Drop files here or click import below",
+          import: "Import Media",
+          importMore: "Import More",
+          importingShort: "Importing...",
+        }
+      : {
+          title: "素材库",
+          importing: "导入中",
+          items: "项",
+          emptyHint: "拖入文件或点击下方按钮",
+          import: "导入素材",
+          importMore: "导入更多",
+          importingShort: "导入中...",
+        };
+  const [importingCount, setImportingCount] = useState(0);
 
   async function handleFiles(files: FileList | null) {
     if (!files) return;
+    setImportingCount((n) => n + files.length);
     for (const file of Array.from(files)) {
       try {
         await addMedia(file);
       } catch (e) {
-        console.error("导入失败:", file.name, e);
+        console.error("Failed to import:", file.name, e);
+      } finally {
+        setImportingCount((n) => Math.max(0, n - 1));
       }
     }
   }
@@ -46,8 +66,12 @@ export function MediaPanel() {
   return (
     <div className="flex h-full flex-col bg-bg-1">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <span className="text-xs font-medium text-fg-2">素材库</span>
-        <span className="text-[10px] text-fg-muted">{project.mediaItems.length} 项</span>
+        <span className="text-xs font-medium text-fg-2">{text.title}</span>
+        <span className="text-[10px] text-fg-muted">
+          {importingCount > 0
+            ? `${text.importing} ${importingCount}`
+            : `${project.mediaItems.length} ${text.items}`}
+        </span>
       </div>
 
       <input
@@ -67,13 +91,14 @@ export function MediaPanel() {
         {project.mediaItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-12">
             <Upload size={28} className="text-fg-muted/40" />
-            <p className="text-xs text-fg-muted">拖入文件或点击下方按钮</p>
+            <p className="text-xs text-fg-muted">{text.emptyHint}</p>
             <button
               onClick={() => inputRef.current?.click()}
+              disabled={importingCount > 0}
               className="flex items-center gap-1.5 rounded-lg border border-border bg-bg-2 px-4 py-2 text-xs text-fg-2 transition-colors hover:bg-hover"
             >
               <Upload size={14} />
-              导入素材
+              {importingCount > 0 ? text.importingShort : text.import}
             </button>
           </div>
         ) : (
@@ -93,10 +118,11 @@ export function MediaPanel() {
         <div className="border-t border-border p-2">
           <button
             onClick={() => inputRef.current?.click()}
+            disabled={importingCount > 0}
             className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs text-fg-muted transition-colors hover:border-strong hover:text-fg-2"
           >
             <Upload size={14} />
-            导入更多
+            {importingCount > 0 ? text.importingShort : text.importMore}
           </button>
         </div>
       )}
@@ -107,6 +133,11 @@ export function MediaPanel() {
 function MediaItemRow({ item, onRemove }: { item: MediaItem; onRemove: () => void }) {
   const { addClip } = useProjectStore();
   const { currentTime } = useEditorStore();
+  const language = useSettingsStore((s) => s.language);
+  const typeLabels: Record<string, string> =
+    language === "en"
+      ? { video: "Video", audio: "Audio", image: "Image" }
+      : { video: "视频", audio: "音频", image: "图片" };
 
   const handleClick = () => {
     const t = Math.round(currentTime * 10) / 10;

@@ -204,6 +204,25 @@ body {
   animation: fadeIn 0.2s ease;
 }
 
+@keyframes modalPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-modal-pop {
+  animation: modalPopIn 0.2s ease-out;
+}
+
+.animate-panel-in {
+  animation: fadeIn 0.18s ease-out;
+}
+
 /* =============================================================================
    Tech UI — Cards, Buttons, Timeline, Preview
    ============================================================================= */
@@ -241,11 +260,12 @@ body {
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
 }
 
 .timeline-clip:hover {
   box-shadow: var(--shadow-md);
+  transform: translateY(-1px) scale(1.01);
 }
 
 .timeline-clip--selected {

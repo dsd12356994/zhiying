@@ -1,16 +1,39 @@
 import { useMemo, useState } from "react";
 import { useEditorStore } from "../../stores/editor-store";
+import { useSettingsStore } from "../../stores/settings-store";
 
-const TRANSITION_TYPES = [
-  { id: "crossDissolve", label: "交叉溶解" },
-  { id: "fade", label: "淡入淡出" },
-  { id: "slide", label: "滑动" },
-  { id: "wipe", label: "擦除" },
-] as const;
+const TRANSITION_TYPES = ["crossDissolve", "fade", "slide", "wipe"] as const;
 
 export function TransitionPanel() {
   const { clips, selectedClipId, addTransition } = useEditorStore();
-  const [type, setType] = useState<(typeof TRANSITION_TYPES)[number]["id"]>("crossDissolve");
+  const language = useSettingsStore((s) => s.language);
+  const text =
+    language === "en"
+      ? {
+          typeLabels: {
+            crossDissolve: "Cross Dissolve",
+            fade: "Fade",
+            slide: "Slide",
+            wipe: "Wipe",
+          } as Record<(typeof TRANSITION_TYPES)[number], string>,
+          target: "Target",
+          selectHint: "Select a clip (the next clip on same track will be used).",
+          duration: "Duration",
+          apply: "Apply To Adjacent Clips",
+        }
+      : {
+          typeLabels: {
+            crossDissolve: "交叉溶解",
+            fade: "淡入淡出",
+            slide: "滑动",
+            wipe: "擦除",
+          } as Record<(typeof TRANSITION_TYPES)[number], string>,
+          target: "目标",
+          selectHint: "请先选中一个片段（系统将使用其后一个同轨片段）",
+          duration: "时长",
+          apply: "应用到相邻片段",
+        };
+  const [type, setType] = useState<(typeof TRANSITION_TYPES)[number]>("crossDissolve");
   const [duration, setDuration] = useState(1);
 
   const sorted = useMemo(
@@ -37,28 +60,28 @@ export function TransitionPanel() {
     <div className="flex h-full flex-col px-3 py-2">
       <div className="mb-2 text-[11px] text-fg-muted">
         {selected && nextClip
-          ? `目标: ${selected.name ?? selected.id.slice(0, 6)} -> ${nextClip.name ?? nextClip.id.slice(0, 6)}`
-          : "请先选中一个片段（系统将使用其后一个同轨片段）"}
+          ? `${text.target}: ${selected.name ?? selected.id.slice(0, 6)} -> ${nextClip.name ?? nextClip.id.slice(0, 6)}`
+          : text.selectHint}
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         {TRANSITION_TYPES.map((item) => (
           <button
-            key={item.id}
+            key={item}
             type="button"
-            onClick={() => setType(item.id)}
+            onClick={() => setType(item)}
             className={`rounded border px-2 py-1 text-[11px] ${
-              type === item.id ? "border-accent text-accent" : "border-border text-fg-2"
+              type === item ? "border-accent text-accent" : "border-border text-fg-2"
             } hover:bg-hover`}
           >
-            {item.label}
+            {text.typeLabels[item]}
           </button>
         ))}
       </div>
 
       <div className="mt-3">
         <div className="mb-1 flex items-center justify-between text-[10px] text-fg-muted">
-          <span>时长</span>
+          <span>{text.duration}</span>
           <span>{duration.toFixed(1)}s</span>
         </div>
         <input
@@ -86,7 +109,7 @@ export function TransitionPanel() {
           });
         }}
       >
-        应用到相邻片段
+        {text.apply}
       </button>
     </div>
   );

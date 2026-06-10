@@ -152,11 +152,12 @@ function parseTrakVideo(
   const stco =
     findBox(buffer, "stco", stbl.start + 8, stbl.start + stbl.size) ??
     findBox(buffer, "co64", stbl.start + 8, stbl.start + stbl.size);
+  const stsc = findBox(buffer, "stsc", stbl.start + 8, stbl.start + stbl.size);
   const stsz = findBox(buffer, "stsz", stbl.start + 8, stbl.start + stbl.size);
   const stts = findBox(buffer, "stts", stbl.start + 8, stbl.start + stbl.size);
   const stss = findBox(buffer, "stss", stbl.start + 8, stbl.start + stbl.size);
   const ctts = findBox(buffer, "ctts", stbl.start + 8, stbl.start + stbl.size);
-  if (!stco || !stsz || !stts) return null;
+  if (!stco || !stsc || !stsz || !stts) return null;
 
   const stcoType = readBoxType(view, stco.start + 4);
   const chunkCount = readU32(view, stco.start + 12);
@@ -178,6 +179,46 @@ function parseTrakVideo(
     }
   } else {
     for (let i = 0; i < sampleCount; i++) sampleSizes.push(defaultSize);
+  }
+
+  const stscEntryCount = readU32(view, stsc.start + 12);
+  const stscEntries: Array<{ firstChunk: number; samplesPerChunk: number }> = [];
+  for (let i = 0; i < stscEntryCount; i++) {
+    stscEntries.push({
+      firstChunk: readU32(view, stsc.start + 16 + i * 12),
+      samplesPerChunk: readU32(view, stsc.start + 20 + i * 12),
+    });
+  }
+  if (stscEntries.length === 0) return null;
+
+  const chunkSamplesCount = new Array<number>(chunkCount).fill(0);
+  for (let i = 0; i < stscEntries.length; i++) {
+    const current = stscEntries[i];
+    const next = stscEntries[i + 1];
+    const startChunk = Math.max(0, current.firstChunk - 1);
+    const endChunk = Math.min(
+      chunkCount - 1,
+      next ? Math.max(0, next.firstChunk - 2) : chunkCount - 1
+    );
+    for (let chunkIdx = startChunk; chunkIdx <= endChunk; chunkIdx++) {
+      chunkSamplesCount[chunkIdx] = current.samplesPerChunk;
+    }
+  }
+
+  const sampleOffsets = new Array<number>(sampleCount).fill(0);
+  let offsetSampleIdx = 0;
+  for (let chunkIdx = 0; chunkIdx < chunkCount && offsetSampleIdx < sampleCount; chunkIdx++) {
+    let chunkOffset = chunkOffsets[chunkIdx] ?? 0;
+    const samplesInChunk = Math.max(0, chunkSamplesCount[chunkIdx] ?? 0);
+    for (
+      let inChunkIdx = 0;
+      inChunkIdx < samplesInChunk && offsetSampleIdx < sampleCount;
+      inChunkIdx++
+    ) {
+      sampleOffsets[offsetSampleIdx] = chunkOffset;
+      chunkOffset += sampleSizes[offsetSampleIdx] ?? 0;
+      offsetSampleIdx++;
+    }
   }
 
   const sttsCount = readU32(view, stts.start + 12);
@@ -232,8 +273,7 @@ function parseTrakVideo(
 
       const size = sampleSizes[sampleIndex] ?? 0;
 
-      let byteOffset = chunkOffsets[0] ?? 0;
-      for (let s = 0; s < sampleIndex; s++) byteOffset += sampleSizes[s] ?? 0;
+      const byteOffset = sampleOffsets[sampleIndex] ?? 0;
 
       samples.push({
         offset: byteOffset,

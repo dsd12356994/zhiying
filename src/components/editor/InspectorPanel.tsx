@@ -4,10 +4,31 @@ import { TransitionPanel } from "./TransitionPanel";
 import { TextEditor } from "./TextEditor";
 import { SpeedEditor } from "./SpeedEditor";
 import { KeyframeEditor } from "./KeyframeEditor";
+import { MarketplacePanel } from "./MarketplacePanel";
+import { useSettingsStore } from "../../stores/settings-store";
 
 export function InspectorPanel() {
+  const language = useSettingsStore((s) => s.language);
+  const text =
+    language === "en"
+      ? {
+          filters: "Filters",
+          transitions: "Transitions",
+          text: "Text",
+          speed: "Speed",
+          keyframes: "Keyframes",
+          market: "Market",
+        }
+      : {
+          filters: "滤镜",
+          transitions: "转场",
+          text: "字幕",
+          speed: "速度",
+          keyframes: "关键帧",
+          market: "市场",
+        };
   const [tab, setTab] = useState<
-    "filters" | "transitions" | "text" | "speed" | "keyframes"
+    "filters" | "transitions" | "text" | "speed" | "keyframes" | "market"
   >("filters");
   return (
     <div className="flex h-full flex-col">
@@ -17,35 +38,42 @@ export function InspectorPanel() {
           className={`rounded px-2 py-1 text-[11px] ${tab === "filters" ? "bg-bg-2 text-fg" : "text-fg-muted hover:bg-hover"}`}
           onClick={() => setTab("filters")}
         >
-          滤镜
+          {text.filters}
         </button>
         <button
           type="button"
           className={`ml-1 rounded px-2 py-1 text-[11px] ${tab === "transitions" ? "bg-bg-2 text-fg" : "text-fg-muted hover:bg-hover"}`}
           onClick={() => setTab("transitions")}
         >
-          转场
+          {text.transitions}
         </button>
         <button
           type="button"
           className={`ml-1 rounded px-2 py-1 text-[11px] ${tab === "text" ? "bg-bg-2 text-fg" : "text-fg-muted hover:bg-hover"}`}
           onClick={() => setTab("text")}
         >
-          字幕
+          {text.text}
         </button>
         <button
           type="button"
           className={`ml-1 rounded px-2 py-1 text-[11px] ${tab === "speed" ? "bg-bg-2 text-fg" : "text-fg-muted hover:bg-hover"}`}
           onClick={() => setTab("speed")}
         >
-          速度
+          {text.speed}
         </button>
         <button
           type="button"
           className={`ml-1 rounded px-2 py-1 text-[11px] ${tab === "keyframes" ? "bg-bg-2 text-fg" : "text-fg-muted hover:bg-hover"}`}
           onClick={() => setTab("keyframes")}
         >
-          关键帧
+          {text.keyframes}
+        </button>
+        <button
+          type="button"
+          className={`ml-1 rounded px-2 py-1 text-[11px] ${tab === "market" ? "bg-bg-2 text-fg" : "text-fg-muted hover:bg-hover"}`}
+          onClick={() => setTab("market")}
+        >
+          {text.market}
         </button>
       </div>
       <div className="h-[calc(100%-34px)]">
@@ -57,6 +85,8 @@ export function InspectorPanel() {
           <TextEditor />
         ) : tab === "speed" ? (
           <SpeedEditor />
+        ) : tab === "market" ? (
+          <MarketplacePanel />
         ) : (
           <KeyframeEditor />
         )}

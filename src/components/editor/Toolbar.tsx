@@ -1,7 +1,14 @@
-import { Undo2, Redo2, Scissors, Plus, Layout, MessageSquare, Download, Clock3 } from "lucide-react";
+import { Undo2, Redo2, Scissors, Plus, Layout, MessageSquare, Download, Clock3, Settings } from "lucide-react";
 import { useEditorStore } from "../../stores/editor-store";
+import { useSettingsStore } from "../../stores/settings-store";
 
-export function Toolbar({ trailing }: { trailing?: React.ReactNode }) {
+export function Toolbar({
+  trailing,
+  onOpenSettings,
+}: {
+  trailing?: React.ReactNode;
+  onOpenSettings?: () => void;
+}) {
   const {
     toggleMediaPanel,
     toggleChatBox,
@@ -15,6 +22,41 @@ export function Toolbar({ trailing }: { trailing?: React.ReactNode }) {
     timeDisplayMode,
     toggleTimeDisplayMode,
   } = useEditorStore();
+  const language = useSettingsStore((s) => s.language);
+  const text =
+    language === "en"
+      ? {
+          untitled: "Untitled",
+          undo: "Undo",
+          redo: "Redo",
+          split: "Split",
+          addMedia: "Add Media",
+          export: "Export",
+          timeFormat: "Time format",
+          marker: "Marker",
+          navigation: "Navigation",
+          playback: "Playback",
+          panel: "Panels",
+          ai: "AI Assistant",
+          settings: "Settings",
+          secFmt: "seconds.sss",
+        }
+      : {
+          untitled: "未命名项目",
+          undo: "撤销",
+          redo: "重做",
+          split: "分割",
+          addMedia: "添加素材",
+          export: "导出视频",
+          timeFormat: "时间格式",
+          marker: "标记",
+          navigation: "导航",
+          playback: "播放",
+          panel: "面板",
+          ai: "AI 助手",
+          settings: "设置",
+          secFmt: "秒数.sss",
+        };
 
   const handleSplit = () => {
     if (selectedClipId) {
@@ -27,37 +69,38 @@ export function Toolbar({ trailing }: { trailing?: React.ReactNode }) {
       {/* Left */}
       <div className="flex items-center gap-3">
         <span className="text-sm font-bold tracking-wide text-accent">智映</span>
-        <span className="text-xs text-fg-muted">未命名项目</span>
+        <span className="text-xs text-fg-muted">{text.untitled}</span>
       </div>
 
       {/* Center */}
       <div className="flex items-center gap-1">
-        <ToolButton icon={<Undo2 size={15} />} tooltip="撤销 (Ctrl+Z)" onClick={undo} disabled={!canUndo} />
-        <ToolButton icon={<Redo2 size={15} />} tooltip="重做 (Ctrl+Shift+Z)" onClick={redo} disabled={!canRedo} />
+        <ToolButton icon={<Undo2 size={15} />} tooltip={`${text.undo} (Ctrl+Z)`} onClick={undo} disabled={!canUndo} />
+        <ToolButton icon={<Redo2 size={15} />} tooltip={`${text.redo} (Ctrl+Shift+Z)`} onClick={redo} disabled={!canRedo} />
         <div className="mx-1 h-5 w-px bg-border" />
-        <ToolButton icon={<Scissors size={15} />} tooltip="分割 (Ctrl+B)" onClick={handleSplit} />
-        <ToolButton icon={<Plus size={15} />} tooltip="添加素材" />
-        <ToolButton icon={<Download size={15} />} tooltip="导出视频" onClick={toggleExportDialog} />
+        <ToolButton icon={<Scissors size={15} />} tooltip={`${text.split} (Ctrl+B)`} onClick={handleSplit} />
+        <ToolButton icon={<Plus size={15} />} tooltip={text.addMedia} />
+        <ToolButton icon={<Download size={15} />} tooltip={text.export} onClick={toggleExportDialog} />
         <ToolButton
           icon={<Clock3 size={15} />}
-          tooltip={`时间格式 (${timeDisplayMode === "clock" ? "mm:ss" : "秒数.sss"}) · Shift+T`}
+          tooltip={`${text.timeFormat} (${timeDisplayMode === "clock" ? "mm:ss" : text.secFmt}) · Shift+T`}
           onClick={toggleTimeDisplayMode}
         />
         <span className="ml-2 text-[10px] text-fg-muted">
-          标记: M / Shift+M
+          {text.marker}: M / Shift+M
         </span>
         <span className="ml-2 text-[10px] text-fg-muted">
-          导航: ←/→ · Shift+←/→ · Home/End
+          {text.navigation}: ←/→ · Shift+←/→ · Home/End
         </span>
         <span className="ml-2 text-[10px] text-fg-muted">
-          播放: J/K/L (1x/2x/4x) · Shift+J/L 直达4x
+          {text.playback}: J/K/L (1x/2x/4x) · Shift+J/L 4x
         </span>
       </div>
 
       {/* Right */}
       <div className="flex items-center gap-1">
-        <ToolButton icon={<Layout size={15} />} tooltip="面板" onClick={toggleMediaPanel} />
-        <ToolButton icon={<MessageSquare size={15} />} tooltip="AI 助手" onClick={toggleChatBox} />
+        <ToolButton icon={<Layout size={15} />} tooltip={text.panel} onClick={toggleMediaPanel} />
+        <ToolButton icon={<MessageSquare size={15} />} tooltip={text.ai} onClick={toggleChatBox} />
+        <ToolButton icon={<Settings size={15} />} tooltip={text.settings} onClick={onOpenSettings} />
         {trailing}
       </div>
     </header>

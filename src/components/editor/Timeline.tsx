@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Copy, Minus, Plus, Scissors, Trash2 } from "lucide-react";
+import { Copy, Link2, Minus, Plus, Scissors, Trash2 } from "lucide-react";
 import { useEditorStore, type TimelineClip } from "../../stores/editor-store";
 import { useProjectStore } from "../../stores/project-store";
+import { useSettingsStore } from "../../stores/settings-store";
 import { VideoDecoder } from "../../lib/videoDecoder";
 
 const BASE_PPS = 80;
@@ -115,6 +116,95 @@ export function Timeline() {
     videoFile,
   } = useEditorStore();
   const project = useProjectStore((s) => s.project);
+  const language = useSettingsStore((s) => s.language);
+  const text =
+    language === "en"
+      ? {
+          rippleMode: "Ripple Mode",
+          overwriteMode: "Overwrite Mode",
+          addMarker: "+ Marker",
+          removeMarker: "- Marker",
+          clearMarkers: "Clear Markers",
+          markerCount: "Markers",
+          detectBeats: "Detect Beats",
+          snapBeat: "Snap To Beat",
+          clearBeats: "Clear Beats",
+          beatCount: "Beats",
+          addMarkerTip: "Add marker at playhead",
+          removeMarkerTip: "Remove nearest marker",
+          clearMarkerTip: "Clear all markers",
+          detectBeatsTip: "Analyze beat points",
+          snapBeatTip: "Snap selected clip to nearest beat",
+          clearBeatTip: "Clear all beats",
+          sourceEndTip: "Source ends at",
+          markerTip: "Marker",
+          markerDelete: "right click to remove",
+          beatTip: "Beat",
+          videoTrack: "Video",
+          audioTrack: "Audio",
+          track: "Track",
+          transitionTip: "Transition",
+          transitionDelete: "right click to remove",
+          snapLabel: "Snap",
+          autoAvoid: "Auto collision avoid",
+          noGap: "No available gap on target track",
+          dropPoint: "Drop target",
+          menuSplit: "Split",
+          menuDuplicate: "Duplicate",
+          menuCopyNextTrack: "Copy To Next Track",
+          menuCloseGap: "Close Gap (Ripple)",
+          menuDelete: "Delete",
+          menuDeleteRipple: "Delete & Ripple",
+          snapPlayhead: "playhead",
+          snapClipStart: "clip start",
+          snapClipEnd: "clip end",
+          snapClipMiddle: "clip center",
+          snapMarker: "marker",
+          snapSecond: "whole second",
+        }
+      : {
+          rippleMode: "波纹模式",
+          overwriteMode: "覆盖模式",
+          addMarker: "+ 标记",
+          removeMarker: "- 标记",
+          clearMarkers: "清空标记",
+          markerCount: "标记",
+          detectBeats: "分析节拍",
+          snapBeat: "对齐节拍",
+          clearBeats: "清空节拍",
+          beatCount: "节拍",
+          addMarkerTip: "添加标记点 (在播放头)",
+          removeMarkerTip: "删除最近标记点",
+          clearMarkerTip: "清空标记点",
+          detectBeatsTip: "分析节拍",
+          snapBeatTip: "将选中片段对齐最近节拍",
+          clearBeatTip: "清空节拍点",
+          sourceEndTip: "原视频结束",
+          markerTip: "标记点",
+          markerDelete: "右键删除",
+          beatTip: "节拍点",
+          videoTrack: "视频轨",
+          audioTrack: "音频轨",
+          track: "轨道",
+          transitionTip: "转场",
+          transitionDelete: "右键删除",
+          snapLabel: "吸附",
+          autoAvoid: "自动错位避让",
+          noGap: "目标轨道无可用空隙",
+          dropPoint: "目标轨道落点",
+          menuSplit: "分割",
+          menuDuplicate: "复制",
+          menuCopyNextTrack: "复制到下一轨",
+          menuCloseGap: "删除空隙(波纹整理)",
+          menuDelete: "删除",
+          menuDeleteRipple: "删除并闭合间隙",
+          snapPlayhead: "播放头",
+          snapClipStart: "片段起点",
+          snapClipEnd: "片段终点",
+          snapClipMiddle: "片段中点",
+          snapMarker: "标记点",
+          snapSecond: "整数秒",
+        };
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const thumbnailsRef = useRef<Map<string, string>>(new Map());
@@ -322,18 +412,18 @@ export function Timeline() {
         }
       };
 
-      check(currentTime, "播放头");
+      check(currentTime, text.snapPlayhead);
       for (const c of clips) {
         if (c.id === movingClipId) continue;
-        check(c.start, "片段起点");
-        check(c.end, "片段终点");
-        check(c.start + (c.end - c.start) / 2, "片段中点");
+        check(c.start, text.snapClipStart);
+        check(c.end, text.snapClipEnd);
+        check(c.start + (c.end - c.start) / 2, text.snapClipMiddle);
       }
       for (const marker of markers) {
-        check(marker, "标记点");
+        check(marker, text.snapMarker);
       }
       const sec = Math.round(rawTime);
-      check(sec, "整数秒");
+      check(sec, text.snapSecond);
 
       if (bestDist <= SNAP_THRESHOLD_PX) {
         if (updateHint) {
@@ -348,7 +438,7 @@ export function Timeline() {
       }
       return rawTime;
     },
-    [clips, currentTime, markers, pps]
+    [clips, currentTime, markers, pps, text]
   );
 
   const resolveTrackDropStart = useCallback(
@@ -717,61 +807,61 @@ export function Timeline() {
                   : "transparent",
             }}
           >
-            {editMode === "ripple" ? "波纹模式" : "覆盖模式"}
+            {editMode === "ripple" ? text.rippleMode : text.overwriteMode}
           </button>
           <button
             type="button"
             className="tool-btn rounded px-2 py-0.5 text-[10px]"
             onClick={() => addMarker()}
-            title="添加标记点 (在播放头)"
+            title={text.addMarkerTip}
           >
-            + 标记
+            {text.addMarker}
           </button>
           <button
             type="button"
             className="tool-btn rounded px-2 py-0.5 text-[10px]"
             onClick={() => removeNearestMarker(currentTime, 0.2)}
-            title="删除最近标记点"
+            title={text.removeMarkerTip}
           >
-            - 标记
+            {text.removeMarker}
           </button>
           <button
             type="button"
             className="tool-btn rounded px-2 py-0.5 text-[10px]"
             onClick={clearMarkers}
-            title="清空标记点"
+            title={text.clearMarkerTip}
           >
-            清空标记
+            {text.clearMarkers}
           </button>
           <span className="text-[10px]" style={{ color: "var(--text-secondary)" }}>
-            标记 {markers.length}
+            {text.markerCount} {markers.length}
           </span>
           <button
             type="button"
             className="tool-btn rounded px-2 py-0.5 text-[10px]"
             onClick={() => void detectBeatMarkers()}
-            title="分析节拍"
+            title={text.detectBeatsTip}
           >
-            分析节拍
+            {text.detectBeats}
           </button>
           <button
             type="button"
             className="tool-btn rounded px-2 py-0.5 text-[10px]"
             onClick={() => snapClipToNearestBeat()}
-            title="将选中片段对齐最近节拍"
+            title={text.snapBeatTip}
           >
-            对齐节拍
+            {text.snapBeat}
           </button>
           <button
             type="button"
             className="tool-btn rounded px-2 py-0.5 text-[10px]"
             onClick={clearBeatMarkers}
-            title="清空节拍点"
+            title={text.clearBeatTip}
           >
-            清空节拍
+            {text.clearBeats}
           </button>
           <span className="text-[10px]" style={{ color: "var(--text-secondary)" }}>
-            节拍 {beatMarkers.length}
+            {text.beatCount} {beatMarkers.length}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -832,7 +922,7 @@ export function Timeline() {
                     left: sourceDuration * pps,
                     backgroundColor: "color-mix(in srgb, var(--accent) 55%, transparent)",
                   }}
-                  title={`原视频结束 ${sourceDuration.toFixed(2)}s`}
+                  title={`${text.sourceEndTip} ${sourceDuration.toFixed(2)}s`}
                 />
               )}
               {markers.map((marker) => (
@@ -850,7 +940,7 @@ export function Timeline() {
                     e.stopPropagation();
                     removeNearestMarker(marker, 0.01);
                   }}
-                  title={`标记点 ${marker.toFixed(2)}s（右键删除）`}
+                  title={`${text.markerTip} ${marker.toFixed(2)}s (${text.markerDelete})`}
                 >
                   <span
                     className="absolute left-1/2 top-0 h-1.5 w-1.5 -translate-x-1/2 rounded-full"
@@ -874,7 +964,7 @@ export function Timeline() {
                     backgroundColor:
                       "color-mix(in srgb, var(--accent) 40%, rgba(255,0,0,0.85))",
                   }}
-                  title={`节拍点 ${beat.toFixed(2)}s`}
+                  title={`${text.beatTip} ${beat.toFixed(2)}s`}
                 />
               ))}
             </div>
@@ -918,7 +1008,11 @@ export function Timeline() {
                   backgroundColor: "var(--bg-primary)",
                 }}
               >
-                {track.index === 0 ? "视频轨" : track.index === 1 ? "音频轨" : `轨道 ${track.index + 1}`}
+                {track.index === 0
+                  ? text.videoTrack
+                  : track.index === 1
+                    ? text.audioTrack
+                    : `${text.track} ${track.index + 1}`}
               </div>
 
               <div className="relative h-full" style={{ marginLeft: TRACK_LABEL_W }}>
@@ -935,7 +1029,7 @@ export function Timeline() {
                         backgroundColor: "color-mix(in srgb, var(--bg-primary) 90%, transparent)",
                         color: "var(--text-secondary)",
                       }}
-                      title={`转场 ${t.type} · ${t.duration.toFixed(1)}s（右键删除）`}
+                      title={`${text.transitionTip} ${t.type} · ${t.duration.toFixed(1)}s (${text.transitionDelete})`}
                       onMouseDown={(e) => e.stopPropagation()}
                       onContextMenu={(e) => {
                         e.preventDefault();
@@ -943,7 +1037,7 @@ export function Timeline() {
                         removeTransition(t.id);
                       }}
                     >
-                      ⟷
+                      <Link2 size={10} />
                     </button>
                   ))}
                 {drag &&
@@ -1083,7 +1177,7 @@ export function Timeline() {
                     border: "1px solid var(--border)",
                   }}
                 >
-                  吸附: {snapHint}
+                  {text.snapLabel}: {snapHint}
                 </div>
               )}
               {dragPreview?.autoOffset && (
@@ -1097,7 +1191,7 @@ export function Timeline() {
                     border: "1px solid var(--border)",
                   }}
                 >
-                  自动错位避让
+                  {text.autoAvoid}
                 </div>
               )}
             </>
@@ -1114,7 +1208,7 @@ export function Timeline() {
                 border: "1px solid var(--border)",
               }}
             >
-              目标轨道无可用空隙
+              {text.noGap}
             </div>
           )}
 
@@ -1137,7 +1231,7 @@ export function Timeline() {
                     ? "color-mix(in srgb, var(--accent) 12%, transparent)"
                     : "color-mix(in srgb, var(--text-primary) 12%, transparent)",
                 }}
-                title={dragPreview.dropValid ? "目标轨道落点" : "目标轨道无可用空隙"}
+                title={dragPreview.dropValid ? text.dropPoint : text.noGap}
               />
             )}
         </div>
@@ -1156,7 +1250,7 @@ export function Timeline() {
         >
           <MenuItem
             icon={<Scissors size={12} />}
-            label="分割"
+            label={text.menuSplit}
             onClick={() => {
               splitClipAt(currentTime, contextMenu.clipId);
               closeContextMenu();
@@ -1164,7 +1258,7 @@ export function Timeline() {
           />
           <MenuItem
             icon={<Copy size={12} />}
-            label="复制"
+            label={text.menuDuplicate}
             onClick={() => {
               duplicateClip(contextMenu.clipId);
               closeContextMenu();
@@ -1172,7 +1266,7 @@ export function Timeline() {
           />
           <MenuItem
             icon={<Copy size={12} />}
-            label="复制到下一轨"
+            label={text.menuCopyNextTrack}
             onClick={() => {
               copyClipToNextTrack(contextMenu.clipId);
               closeContextMenu();
@@ -1180,7 +1274,7 @@ export function Timeline() {
           />
           <MenuItem
             icon={<Plus size={12} />}
-            label="删除空隙(波纹整理)"
+            label={text.menuCloseGap}
             onClick={() => {
               normalizeTrack(contextMenu.trackIndex);
               closeContextMenu();
@@ -1188,7 +1282,7 @@ export function Timeline() {
           />
           <MenuItem
             icon={<Trash2 size={12} />}
-            label="删除"
+            label={text.menuDelete}
             danger
             onClick={() => {
               removeClip(contextMenu.clipId);
@@ -1197,7 +1291,7 @@ export function Timeline() {
           />
           <MenuItem
             icon={<Trash2 size={12} />}
-            label="删除并闭合间隙"
+            label={text.menuDeleteRipple}
             danger
             onClick={() => {
               removeClipAndRipple(contextMenu.clipId);

@@ -3,6 +3,7 @@ import { X, Download, AlertCircle, Film } from "lucide-react";
 import { useProjectStore } from "../../stores/project-store";
 import { useEditorStore } from "../../stores/editor-store";
 import { exportVideo, saveAs } from "../../lib/videoExporter";
+import { useSettingsStore } from "../../stores/settings-store";
 
 interface Props {
   open: boolean;
@@ -18,12 +19,56 @@ interface ExportProgressView {
 export function ExportDialog({ open, onClose }: Props) {
   const { project } = useProjectStore();
   const { clips, transitions, videoFile, getTotalDuration } = useEditorStore();
+  const language = useSettingsStore((s) => s.language);
+  const exportPresetConfig = useSettingsStore((s) => s.getExportPresetConfig());
+  const text =
+    language === "en"
+      ? {
+          title: "Export Video",
+          noClipError: "Please import media and place clips on timeline before exporting.",
+          preparing: "Preparing export...",
+          done: "Export completed",
+          failed: "Export failed",
+          resolution: "Resolution",
+          duration: "Duration",
+          fps: "FPS",
+          format: "Format",
+          tracks: "Tracks",
+          projectFps: "project",
+          warningTitle: "Some items may not be fully exported:",
+          transitionSupport: "Transition export: crossDissolve / fade / slide / wipe",
+          startExport: "Start Export",
+          downloading: "Download Video",
+          close: "Close",
+          audioWarn: "Standalone audio tracks are supported in WebCodecs; FFmpeg fallback may be incomplete.",
+          doneWithMethod: (method: string) => `Export completed (${method})`,
+        }
+      : {
+          title: "导出视频",
+          noClipError: "请先导入素材并在时间轴上放置片段后再导出。",
+          preparing: "准备导出…",
+          done: "导出完成",
+          failed: "导出失败",
+          resolution: "分辨率",
+          duration: "时长",
+          fps: "帧率",
+          format: "格式",
+          tracks: "轨道数",
+          projectFps: "项目",
+          warningTitle: "当前导出链路中，以下内容可能不会完整导出：",
+          transitionSupport: "转场导出支持：crossDissolve / fade / slide / wipe",
+          startExport: "开始导出",
+          downloading: "下载视频",
+          close: "关闭",
+          audioWarn: "独立音频轨（WebCodecs 已支持，FFmpeg 降级可能不完整）",
+          doneWithMethod: (method: string) => `导出完成（${method}）`,
+        };
   const [progress, setProgress] = useState<ExportProgressView | null>(null);
   const [result, setResult] = useState<Blob | null>(null);
 
   const hasAudioClips = clips.some((c) => c.type === "audio");
   const capabilityWarnings = [
-    hasAudioClips ? "独立音频轨（WebCodecs 已支持，FFmpeg 降级可能不完整）" : "",
+    hasAudioClips ? text.audioWarn : "",
   ].filter(Boolean);
 
   const handleExport = useCallback(async () => {
@@ -31,14 +76,20 @@ export function ExportDialog({ open, onClose }: Props) {
       setProgress({
         status: "error",
         progress: 0,
-        message: "请先导入素材并在时间轴上放置片段后再导出。",
+        message: text.noClipError,
       });
       return;
     }
-    setProgress({ status: "preparing", progress: 0, message: "准备导出…" });
+    setProgress({ status: "preparing", progress: 0, message: text.preparing });
     setResult(null);
     try {
+      const mediaFileBySrc = new Map(
+        project.mediaItems
+          .filter((m): m is typeof m & { file: File } => m.file instanceof File)
+          .map((m) => [m.url, m.file] as const)
+      );
       const exportInputs = clips.map((clip) => ({
+        file: mediaFileBySrc.get(clip.src) ?? videoFile,
         id: clip.id,
         type: clip.type,
         src: clip.src,
@@ -57,9 +108,9 @@ export function ExportDialog({ open, onClose }: Props) {
         position: clip.position,
         animation: clip.animation,
         keyframes: clip.keyframes,
-        file: videoFile,
       }));
       const result = await exportVideo(exportInputs, {
+        fps: exportPresetConfig.fps,
         onProgress: ({ progress, stage }) => {
           const p = Math.round(progress * 100);
           setProgress({
@@ -80,16 +131,16 @@ export function ExportDialog({ open, onClose }: Props) {
       setProgress({
         status: "done",
         progress: 100,
-        message: `导出完成（${result.method}）`,
+        message: text.doneWithMethod(result.method),
       });
     } catch (error) {
       setProgress({
         status: "error",
         progress: 0,
-        message: error instanceof Error ? error.message : "导出失败",
+        message: error instanceof Error ? error.message : text.failed,
       });
     }
-  }, [clips, transitions, videoFile]);
+  }, [clips, transitions, videoFile, project, exportPresetConfig.fps, text]);
 
   const handleDownload = useCallback(() => {
     if (result) {
@@ -104,13 +155,13 @@ export function ExportDialog({ open, onClose }: Props) {
   const isRunning = progress && !isDone && !isError;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-96 rounded-xl border border-border bg-bg-elev p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+      <div className="w-96 rounded-xl border border-border bg-bg-elev p-6 shadow-2xl animate-modal-pop">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Film size={18} className="text-accent" />
-            <span className="text-sm font-medium text-fg">导出视频</span>
+            <span className="text-sm font-medium text-fg">{text.title}</span>
           </div>
           <button onClick={onClose} className="text-fg-muted hover:text-fg">
             <X size={16} />
@@ -120,35 +171,38 @@ export function ExportDialog({ open, onClose }: Props) {
         {/* Info */}
         <div className="mb-4 space-y-1 rounded-lg bg-bg-2 p-3 text-xs text-fg-2">
           <div className="flex justify-between">
-            <span>分辨率</span>
+            <span>{text.resolution}</span>
             <span className="text-fg">{project.width}×{project.height}</span>
           </div>
           <div className="flex justify-between">
-            <span>时长</span>
+            <span>{text.duration}</span>
             <span className="text-fg">{getTotalDuration().toFixed(1)}s</span>
           </div>
           <div className="flex justify-between">
-            <span>帧率</span>
-            <span className="text-fg">{project.fps} fps</span>
+            <span>{text.fps}</span>
+            <span className="text-fg">
+              {exportPresetConfig.fps} fps
+              <span className="ml-1 text-fg-muted">({text.projectFps} {project.fps})</span>
+            </span>
           </div>
           <div className="flex justify-between">
-            <span>格式</span>
+            <span>{text.format}</span>
             <span className="text-fg">MP4 (WebCodecs/FFmpeg)</span>
           </div>
           <div className="flex justify-between">
-            <span>轨道数</span>
+            <span>{text.tracks}</span>
             <span className="text-fg">{Math.max(1, new Set(clips.map((c) => c.trackIndex)).size)}</span>
           </div>
         </div>
         {capabilityWarnings.length > 0 && (
           <div className="mb-4 rounded-lg border border-border px-3 py-2 text-[11px] text-fg-muted">
-            当前导出链路中，以下内容可能不会完整导出：
+            {text.warningTitle}
             <span className="text-fg"> {capabilityWarnings.join(" / ")}</span>
           </div>
         )}
         {capabilityWarnings.length === 0 && transitions.length > 0 && (
           <div className="mb-4 rounded-lg border border-border px-3 py-2 text-[11px] text-fg-muted">
-            转场导出支持：<span className="text-fg">crossDissolve / fade / slide / wipe</span>
+            {text.transitionSupport}
           </div>
         )}
 
@@ -157,7 +211,7 @@ export function ExportDialog({ open, onClose }: Props) {
           <div className="mb-4">
             <div className="flex items-center justify-between text-xs mb-1.5">
               <span className="text-fg-2">
-                {isDone ? "✅ 导出完成" : isRunning ? progress.message : ""}
+                {isDone ? text.done : isRunning ? progress.message : ""}
               </span>
               <span className="text-fg-muted">{progress.progress}%</span>
             </div>
@@ -190,7 +244,7 @@ export function ExportDialog({ open, onClose }: Props) {
               className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-xs font-medium text-accent-fg transition-opacity hover:opacity-90 disabled:opacity-40"
             >
               <Download size={14} />
-              开始导出
+              {text.startExport}
             </button>
           )}
           {isDone && result && (
@@ -200,13 +254,13 @@ export function ExportDialog({ open, onClose }: Props) {
                 className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-xs font-medium text-accent-fg transition-opacity hover:opacity-90"
               >
                 <Download size={14} />
-                下载视频 ({Math.round(result.size / 1024 / 1024)} MB)
+                {text.downloading} ({Math.round(result.size / 1024 / 1024)} MB)
               </button>
               <button
                 onClick={onClose}
                 className="rounded-lg border border-border px-4 py-2.5 text-xs text-fg-2 hover:bg-hover"
               >
-                关闭
+                {text.close}
               </button>
             </>
           )}

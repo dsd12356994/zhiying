@@ -792,7 +792,7 @@ async function exportWithFfmpeg(
   const ffmpeg = new FFmpeg();
 
   ffmpeg.on("progress", ({ progress }) => {
-    report(onProgress, 0.1 + (progress / 100) * 0.85, "FFmpeg 编码中…");
+    report(onProgress, 0.1 + progress * 0.85, "FFmpeg 编码中…");
   });
 
   const coreVersion = "0.12.10";

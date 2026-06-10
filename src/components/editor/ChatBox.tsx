@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageSquare, X, Send, Bot, Zap } from "lucide-react";
 import { useChatStore } from "../../stores/chat-store";
 import { useEditorStore } from "../../stores/editor-store";
+import { useSettingsStore } from "../../stores/settings-store";
 import {
   askLLM,
   summarizeAfterToolExecution,
@@ -63,6 +64,73 @@ const AI_SMOKE_CASES: Array<{ prompt: string; expectedTool: string }> = [
 export function ChatBox() {
   const { showChatBox, toggleChatBox } = useEditorStore();
   const { messages, addMessage } = useChatStore();
+  const language = useSettingsStore((s) => s.language);
+  const text =
+    language === "en"
+      ? {
+          title: "AI Assistant",
+          toolHits: "Tool hits",
+          failureHints: "Failure hints",
+          summary: "Summary",
+          reflection: "Reflection",
+          repair: "Repair suggestions",
+          aiModeOff: "AI mode is off. Message recorded only, no tool execution.",
+          aiError: "AI processing error",
+          retry: "Retry",
+          suggestionRun: "Suggestion",
+          smokeHeader: "AI smoke check (parse only, no execution)",
+          smokeResult: "Result",
+          smokePass: "passed",
+          diagnosticsShow: "Show diagnostics",
+          diagnosticsHide: "Hide diagnostics",
+          smokeBtn: "Smoke",
+          smokeRunning: "Running...",
+          smokeTitle: "Validate common prompts parser mapping",
+          retryFailed: "Retry failed step",
+          inputAi: "Edit with AI...",
+          inputCmd: "Type command...",
+          aiOn: "AI Agent enabled",
+          aiOff: "AI Agent disabled",
+          providerTitle: "Model provider",
+          calls: "Calls",
+          successRate: "Success rate",
+          avgMs: "Avg latency",
+          failed: "Failed",
+          justSuccess: "just succeeded",
+          justFailed: "just failed",
+        }
+      : {
+          title: "AI 助手",
+          toolHits: "命中工具",
+          failureHints: "历史失败经验命中",
+          summary: "总结",
+          reflection: "反思",
+          repair: "建议重试方案",
+          aiModeOff: "AI 模式已关闭，仅记录消息，不执行工具。",
+          aiError: "AI 处理出错",
+          retry: "重试",
+          suggestionRun: "方案执行",
+          smokeHeader: "AI 冒烟检查（仅解析，不执行工具）",
+          smokeResult: "结果",
+          smokePass: "通过",
+          diagnosticsShow: "显示诊断",
+          diagnosticsHide: "隐藏诊断",
+          smokeBtn: "AI冒烟",
+          smokeRunning: "冒烟中…",
+          smokeTitle: "快速验证常见命令是否能解析到目标工具",
+          retryFailed: "重试失败步骤",
+          inputAi: "用 AI 指挥剪辑…",
+          inputCmd: "输入指令…",
+          aiOn: "AI Agent 已启用",
+          aiOff: "AI Agent 已关闭",
+          providerTitle: "模型提供方",
+          calls: "调用总数",
+          successRate: "成功率",
+          avgMs: "平均耗时",
+          failed: "失败数",
+          justSuccess: "刚成功",
+          justFailed: "刚失败",
+        };
   const [input, setInput] = useState("");
   const [composing, setComposing] = useState(false);
   const [aiMode, setAiMode] = useState(true);
@@ -94,17 +162,17 @@ export function ChatBox() {
   }, [messages]);
 
   const handleSend = useCallback(async () => {
-    const text = input.trim();
-    if (!text || loading) return;
+    const userText = input.trim();
+    if (!userText || loading) return;
     setInput("");
     setLoading(true);
-    addMessage("user", text);
+    addMessage("user", userText);
     setRepairSuggestions([]);
     setRepairSuggestionMarks({});
 
     try {
       if (aiMode) {
-        const llm = await askLLM(text, { provider });
+        const llm = await askLLM(userText, { provider });
         const results: string[] = [];
         const observations: ToolExecutionObservation[] = [];
 
@@ -112,11 +180,11 @@ export function ChatBox() {
           results.push(`🤖 [${llm.providerUsed}] ${llm.message}`);
         }
         if (llm.retrievedTools.length > 0) {
-          results.push(`🔎 命中工具: ${llm.retrievedTools.join(", ")}`);
+          results.push(`🔎 ${text.toolHits}: ${llm.retrievedTools.join(", ")}`);
         }
         if (llm.retrievedFailureHints.length > 0) {
           results.push(
-            `🧩 历史失败经验命中: ${Array.from(
+            `🧩 ${text.failureHints}: ${Array.from(
               new Set(llm.retrievedFailureHints)
             ).join(", ")}`
           );
@@ -138,7 +206,7 @@ export function ChatBox() {
               elapsedMs: elapsed,
             });
             logAgentExecution({
-              userInput: text,
+              userInput: userText,
               provider: llm.providerUsed,
               toolName: toolCall.name,
               params: toolCall.params ?? {},
@@ -159,7 +227,7 @@ export function ChatBox() {
           }
           setLastFailedTool(firstFailure);
         } else {
-          const fallback = await parseAndExecute(text);
+          const fallback = await parseAndExecute(userText);
           if (fallback.success) {
             results.push(`✅ fallback: ${fallback.message}`);
           } else {
@@ -168,15 +236,15 @@ export function ChatBox() {
         }
 
         if (observations.length > 0) {
-          const summary = await summarizeAfterToolExecution(text, observations, {
+          const summary = await summarizeAfterToolExecution(userText, observations, {
             provider,
           });
-          results.push(`🧠 总结: ${summary}`);
-          const reflection = await reflectOnExecution(text, observations, llm.providerUsed);
-          results.push(`🪞 反思: ${reflection}`);
+          results.push(`🧠 ${text.summary}: ${summary}`);
+          const reflection = await reflectOnExecution(userText, observations, llm.providerUsed);
+          results.push(`🪞 ${text.reflection}: ${reflection}`);
           if (observations.some((o) => !o.ok)) {
             saveFailureCase({
-              userInput: text,
+              userInput: userText,
               provider: llm.providerUsed,
               observations,
               reflection,
@@ -195,7 +263,7 @@ export function ChatBox() {
             setRepairSuggestions(ranked);
             if (suggestions.length > 0) {
               results.push(
-                `🛠️ 建议重试方案: ${ranked
+                `🛠️ ${text.repair}: ${ranked
                   .map((s) => `${s.toolName}(${JSON.stringify(s.params)})`)
                   .join(" | ")}`
               );
@@ -206,11 +274,11 @@ export function ChatBox() {
         addMessage("assistant", results.join("\n"));
         setMetricsTick((n) => n + 1);
       } else {
-        addMessage("assistant", "AI 模式已关闭，仅记录消息，不执行工具。");
+        addMessage("assistant", text.aiModeOff);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "未知错误";
-      addMessage("assistant", `⚠️ AI 处理出错：${msg}`);
+      addMessage("assistant", `⚠️ ${text.aiError}: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -234,7 +302,7 @@ export function ChatBox() {
       });
       addMessage(
         "assistant",
-        `${result.ok ? "✅" : "❌"} 重试 ${lastFailedTool.name} (${elapsed}ms): ${result.message}`
+        `${result.ok ? "✅" : "❌"} ${text.retry} ${lastFailedTool.name} (${elapsed}ms): ${result.message}`
       );
       if (result.ok) setLastFailedTool(null);
       setMetricsTick((n) => n + 1);
@@ -263,7 +331,7 @@ export function ChatBox() {
         });
         addMessage(
           "assistant",
-          `${result.ok ? "✅" : "❌"} 方案执行 ${suggestion.toolName} (${elapsed}ms): ${result.message}`
+          `${result.ok ? "✅" : "❌"} ${text.suggestionRun} ${suggestion.toolName} (${elapsed}ms): ${result.message}`
         );
         setRepairSuggestionMarks((prev) => ({
           ...prev,
@@ -291,7 +359,7 @@ export function ChatBox() {
     if (loading || smokeRunning) return;
     setSmokeRunning(true);
     try {
-      const lines: string[] = ["🧪 AI 冒烟检查（仅解析，不执行工具）"];
+      const lines: string[] = [`🧪 ${text.smokeHeader}`];
       let pass = 0;
       for (const c of AI_SMOKE_CASES) {
         const result = await askLLM(c.prompt, { provider: "mock" });
@@ -299,7 +367,7 @@ export function ChatBox() {
         if (hit) pass++;
         lines.push(`${hit ? "✅" : "❌"} ${c.prompt} -> 期望 ${c.expectedTool}`);
       }
-      lines.push(`结果：${pass}/${AI_SMOKE_CASES.length} 通过`);
+      lines.push(`${text.smokeResult}: ${pass}/${AI_SMOKE_CASES.length} ${text.smokePass}`);
       addMessage("assistant", lines.join("\n"));
     } finally {
       setSmokeRunning(false);
@@ -323,7 +391,7 @@ export function ChatBox() {
           <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
             <div className="flex items-center gap-2">
               <Bot size={14} className="text-accent" />
-              <span className="text-xs font-medium text-fg">AI 助手</span>
+              <span className="text-xs font-medium text-fg">{text.title}</span>
             </div>
             <div className="flex items-center gap-1">
               {/* AI mode toggle */}
@@ -334,7 +402,7 @@ export function ChatBox() {
                     ? "bg-accent text-accent-fg"
                     : "text-fg-muted hover:bg-hover"
                 }`}
-                title={aiMode ? "AI Agent 已启用" : "AI Agent 已关闭"}
+                title={aiMode ? text.aiOn : text.aiOff}
               >
                 <Zap size={10} />
                 {aiMode ? "Agent" : "关闭"}
@@ -343,7 +411,7 @@ export function ChatBox() {
                 value={provider}
                 onChange={(e) => setProvider(e.target.value as AgentProvider)}
                 className="rounded border border-border bg-bg-2 px-1 py-0.5 text-[10px] text-fg"
-                title="模型提供方"
+                title={text.providerTitle}
               >
                 <option value="mock">Mock</option>
                 <option value="deepseek">DeepSeek</option>
@@ -355,10 +423,10 @@ export function ChatBox() {
           </div>
           {showDiagnostics && (
             <div className="border-b border-border px-3 py-2 text-[10px] text-fg-muted">
-              <div>调用总数: {metrics.total}</div>
-              <div>成功率: {(metrics.successRate * 100).toFixed(1)}%</div>
-              <div>平均耗时: {metrics.avgElapsedMs.toFixed(1)}ms</div>
-              <div>失败数: {metrics.failed}</div>
+              <div>{text.calls}: {metrics.total}</div>
+              <div>{text.successRate}: {(metrics.successRate * 100).toFixed(1)}%</div>
+              <div>{text.avgMs}: {metrics.avgElapsedMs.toFixed(1)}ms</div>
+              <div>{text.failed}: {metrics.failed}</div>
             </div>
           )}
 
@@ -406,16 +474,16 @@ export function ChatBox() {
                   onClick={() => setShowDiagnostics((v) => !v)}
                   className="rounded px-1.5 py-0.5 text-[10px] text-fg-muted hover:bg-hover"
                 >
-                  {showDiagnostics ? "隐藏诊断" : "显示诊断"} · #{metricsTick}
+                  {showDiagnostics ? text.diagnosticsHide : text.diagnosticsShow} · #{metricsTick}
                 </button>
                 <button
                   type="button"
                   onClick={() => void handleRunSmoke()}
                   disabled={smokeRunning || loading}
                   className="rounded px-1.5 py-0.5 text-[10px] text-fg-muted hover:bg-hover disabled:opacity-50"
-                  title="快速验证常见命令是否能解析到目标工具"
+                  title={text.smokeTitle}
                 >
-                  {smokeRunning ? "冒烟中…" : "AI冒烟"}
+                  {smokeRunning ? text.smokeRunning : text.smokeBtn}
                 </button>
               </div>
               {lastFailedTool && (
@@ -425,7 +493,7 @@ export function ChatBox() {
                   className="rounded px-1.5 py-0.5 text-[10px] text-fg-muted hover:bg-hover"
                   title={`重试 ${lastFailedTool.name}: ${lastFailedTool.reason}`}
                 >
-                  重试失败步骤
+                  {text.retryFailed}
                 </button>
               )}
             </div>
@@ -437,9 +505,9 @@ export function ChatBox() {
                     const mark = repairSuggestionMarks[key];
                     const label =
                       mark === "success"
-                        ? `${s.label} · 刚成功`
+                        ? `${s.label} · ${text.justSuccess}`
                         : mark === "failed"
-                          ? `${s.label} · 刚失败`
+                          ? `${s.label} · ${text.justFailed}`
                           : s.label;
                     return (
                   <button
@@ -475,7 +543,7 @@ export function ChatBox() {
                     handleSend();
                   }
                 }}
-                placeholder={aiMode ? "用 AI 指挥剪辑…" : "输入指令…"}
+                placeholder={aiMode ? text.inputAi : text.inputCmd}
                 rows={1}
                 className="flex-1 resize-none rounded-lg border border-border bg-bg-2 px-3 py-2 text-xs text-fg outline-none placeholder:text-fg-muted focus:border-accent"
               />

@@ -1,34 +1,11 @@
-import { useState } from "react";
-
-type Theme = "light" | "dark";
-
-const STORAGE_KEY = "theme";
-
-function getStoredTheme(): Theme {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === "dark" || stored === "light") return stored;
-  return "light";
-}
-
-function applyTheme(theme: Theme) {
-  document.documentElement.setAttribute("data-theme", theme);
-  localStorage.setItem(STORAGE_KEY, theme);
-}
+import { useSettingsStore } from "../stores/settings-store";
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const stored = getStoredTheme();
-    applyTheme(stored);
-    return stored;
-  });
-
   const toggleTheme = () => {
-    setTheme((prev) => {
-      const next: Theme = prev === "light" ? "dark" : "light";
-      applyTheme(next);
-      return next;
-    });
+    const theme = useSettingsStore.getState().theme;
+    useSettingsStore.getState().setTheme(theme === "light" ? "dark" : "light");
   };
+  const theme = useSettingsStore((s) => s.theme);
 
   return (
     <button

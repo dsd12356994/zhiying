@@ -1,9 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { FILTER_PRESETS, buildFilterCss, type FilterName } from "../../lib/filters";
 import { useEditorStore } from "../../stores/editor-store";
+import { useSettingsStore } from "../../stores/settings-store";
 
 export function FiltersPanel() {
   const { clips, selectedClipId, applyFilter } = useEditorStore();
+  const language = useSettingsStore((s) => s.language);
+  const text =
+    language === "en"
+      ? {
+          hintReady: "Choose a filter and adjust intensity.",
+          hintSelect: "Select a video clip to apply filters.",
+          intensity: "Intensity",
+        }
+      : {
+          hintReady: "选择滤镜并调节强度",
+          hintSelect: "请选择一个视频片段后设置滤镜",
+          intensity: "强度",
+        };
   const selectedClip = useMemo(
     () => clips.find((clip) => clip.id === selectedClipId) ?? null,
     [clips, selectedClipId]
@@ -31,7 +45,7 @@ export function FiltersPanel() {
   return (
     <div className="flex h-full flex-col">
       <div className="px-3 py-2 text-[11px] text-fg-muted">
-        {canApply ? "选择滤镜并调节强度" : "请选择一个视频片段后设置滤镜"}
+        {canApply ? text.hintReady : text.hintSelect}
       </div>
 
       <div className="grid grid-cols-2 gap-2 overflow-y-auto px-3 pb-3">
@@ -66,7 +80,7 @@ export function FiltersPanel() {
 
       <div className="border-t border-border px-3 py-2">
         <div className="mb-1 flex items-center justify-between text-[10px] text-fg-muted">
-          <span>强度</span>
+          <span>{text.intensity}</span>
           <span>{intensity.toFixed(2)}</span>
         </div>
         <input

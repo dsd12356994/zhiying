@@ -42,6 +42,8 @@ export interface ProjectState {
 
   // Project
   setProjectName: (name: string) => void;
+  setProject: (project: Project) => void;
+  resetProject: (name?: string) => void;
 }
 
 function pushHistory(s: ProjectState) {
@@ -133,6 +135,30 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
 
   setProjectName: (name) =>
     set((s) => ({ project: { ...s.project, name } })),
+
+  setProject: (project) =>
+    set({
+      project,
+      currentTime: 0,
+      isPlaying: false,
+      selectedClipId: null,
+      _undoStack: [],
+      _redoStack: [],
+      canUndo: false,
+      canRedo: false,
+    }),
+
+  resetProject: (name = "未命名项目") =>
+    set({
+      project: createEmptyProject(name),
+      currentTime: 0,
+      isPlaying: false,
+      selectedClipId: null,
+      _undoStack: [],
+      _redoStack: [],
+      canUndo: false,
+      canRedo: false,
+    }),
 
   addMedia: async (file: File) => {
     const url = URL.createObjectURL(file);

@@ -3,6 +3,7 @@ import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-rea
 import { useEditorStore, type Keyframe, type KeyframeProperty, type TimelineClip } from "../../stores/editor-store";
 import { formatTime } from "../../stores/types";
 import { buildFilterCss } from "../../lib/filters";
+import { useSettingsStore } from "../../stores/settings-store";
 
 const CLIP_EPS = 1e-4;
 
@@ -109,6 +110,19 @@ export function Preview() {
     setSelectedClipId,
     updateTextClip,
   } = useEditorStore();
+  const language = useSettingsStore((s) => s.language);
+  const text =
+    language === "en"
+      ? {
+          emptyJumping: "Blank area detected, jumping to next clip...",
+          emptyPlayhead: "Playhead is in a blank area",
+          emptyNoClip: "Import media and add clips to timeline",
+        }
+      : {
+          emptyJumping: "空白区间，正在跳转到下一个片段…",
+          emptyPlayhead: "播放头位于空白区间",
+          emptyNoClip: "导入视频后从素材库添加到时间轴",
+        };
   const videoRef = useRef<HTMLVideoElement>(null);
   const transitionVideoRef = useRef<HTMLVideoElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -428,9 +442,9 @@ export function Preview() {
             <p className="text-sm text-fg-muted">
               {videoClips.length
                 ? isPlaying && nextVideoClip
-                  ? "空白区间，正在跳转到下一个片段…"
-                  : "播放头位于空白区间"
-                : "导入视频后从素材库添加到时间轴"}
+                  ? text.emptyJumping
+                  : text.emptyPlayhead
+                : text.emptyNoClip}
             </p>
           </div>
         )}
