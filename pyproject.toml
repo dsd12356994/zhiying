@@ -4,9 +4,11 @@ version = "0.1.0"
 description = "Headless agentic video-production pipeline built on Remotion"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.141.1",
     "jsonschema>=4.26.0",
     "pydantic>=2.13.4",
     "python-dotenv>=1.2.2",
     "pyyaml>=6.0.3",
     "requests>=2.34.2",
+    "uvicorn>=0.52.0",
 ]

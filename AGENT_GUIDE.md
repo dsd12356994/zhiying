@@ -1,6 +1,6 @@
 # Agent Guide
 
-This repository has **no standalone orchestrator process**. There is no server, no webhook, no job queue. The coding agent operating this repo (Claude Code or equivalent) *is* the production director — you read this file, then the pipeline manifest, then the relevant stage-director skill, then you call tools yourself and checkpoint your own progress.
+This repository has **no standalone orchestrator process**. There is no webhook, no job queue. The coding agent operating this repo (Claude Code or equivalent) *is* the production director — you read this file, then the pipeline manifest, then the relevant stage-director skill, then you call tools yourself and checkpoint your own progress. (There is an optional local dashboard, `dashboard/`, for testing -- see below. It's a viewer, not a second orchestrator.)
 
 ## How to run a production
 
@@ -24,3 +24,7 @@ This repository has **no standalone orchestrator process**. There is no server, 
 ## Current pipelines
 
 - `cinematic-trailer` (`pipeline_defs/cinematic-trailer.yaml`, `skills/pipelines/cinematic-trailer/`) — the only one that exists. 15–30s cinematic/trailer style, built to exercise the `composer/src/effects/` layer.
+
+## Local dashboard (`dashboard/`)
+
+`uv run uvicorn dashboard.server:app --reload`, then open `localhost:8000`. Lists projects, shows each stage's checkpoint, plays the render inline, and has buttons for the `assets`/`compose`/`deliver` stages -- each just calls the same `lib`/`tools` functions described above, nothing new. It deliberately has **no button for `scene_plan`**: authoring it is a creative call and stays conversational (that stage's checkpoint has to already exist, written by you, before the dashboard's `assets` button does anything). Don't extend this to call an LLM to auto-generate `scene_plan` without the user explicitly deciding to change that.
