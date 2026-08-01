@@ -29,6 +29,9 @@ const vertexShader = `
   uniform vec2 uMouse;
   uniform float uRadius;
   uniform float uStrength;
+  uniform vec2 uTextCenter;
+  uniform float uTextRadius;
+  uniform float uTextActive;
   varying float vAlpha;
 
   void main() {
@@ -39,14 +42,27 @@ const vertexShader = `
     pos.y += cos(uTime * 0.5 + aPhase * 1.3) * 0.18;
 
     // repel from (eased, in JS) mouse position
-    vec2 toParticle = pos.xy - uMouse;
-    float dist = length(toParticle);
-    float falloff = smoothstep(uRadius, 0.0, dist);
-    if (dist > 0.0001) {
-      pos.xy += normalize(toParticle) * falloff * uStrength;
+    vec2 toMouse = pos.xy - uMouse;
+    float mouseDist = length(toMouse);
+    float mouseFalloff = smoothstep(uRadius, 0.0, mouseDist);
+    if (mouseDist > 0.0001) {
+      pos.xy += normalize(toMouse) * mouseFalloff * uStrength;
     }
 
-    vAlpha = 0.35 + falloff * 0.5;
+    // orbital swirl around the 3D text -- particles near it keep rotating
+    // around its center (angle grows with uTime), not just a one-off nudge;
+    // mix() with textFalloff==0 leaves pos.xy exactly unchanged, so this is
+    // a no-op everywhere except close to the text.
+    vec2 toText = pos.xy - uTextCenter;
+    float textDist = length(toText);
+    float textFalloff = smoothstep(uTextRadius, 0.0, textDist) * uTextActive;
+    float angle = uTime * 0.5 * textFalloff;
+    float s = sin(angle);
+    float c = cos(angle);
+    vec2 rotated = vec2(toText.x * c - toText.y * s, toText.x * s + toText.y * c);
+    pos.xy = uTextCenter + mix(toText, rotated, textFalloff);
+
+    vAlpha = 0.35 + max(mouseFalloff, textFalloff * 0.8) * 0.5;
 
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
     gl_PointSize = aSize * (300.0 / -mvPosition.z);
@@ -118,6 +134,9 @@ export function initHeroScene(canvas, container) {
       uRadius: { value: REPEL_RADIUS },
       uStrength: { value: REPEL_STRENGTH },
       uColor: { value: new THREE.Color(ACCENT_COLOR) },
+      uTextCenter: { value: new THREE.Vector2(0, 0) },
+      uTextRadius: { value: 0 },
+      uTextActive: { value: 0 }, // flips to 1 once the text mesh has loaded
     },
   });
 
@@ -157,7 +176,9 @@ export function initHeroScene(canvas, container) {
       });
       textGeo.computeBoundingBox();
       const box = textGeo.boundingBox;
-      textGeo.translate(-(box.max.x - box.min.x) / 2, -(box.max.y - box.min.y) / 2, 0);
+      const halfWidth = (box.max.x - box.min.x) / 2;
+      const halfHeight = (box.max.y - box.min.y) / 2;
+      textGeo.translate(-halfWidth, -halfHeight, 0);
 
       const textMaterial = new THREE.MeshStandardMaterial({
         color: 0xf2f2ee,
@@ -171,6 +192,12 @@ export function initHeroScene(canvas, container) {
       // flourish, not a layout that needs pixel-perfect handoff.
       textMesh.position.set(-16, 4, 0);
       scene.add(textMesh);
+
+      // Particle orbital swirl (see vertexShader) centers on the text's
+      // world position, radius generous enough to sweep past its edges.
+      material.uniforms.uTextCenter.value.set(textMesh.position.x, textMesh.position.y);
+      material.uniforms.uTextRadius.value = Math.max(halfWidth, halfHeight) * 1.6;
+      material.uniforms.uTextActive.value = 1;
 
       const heroTitle = document.querySelector(".hero-title");
       if (heroTitle) heroTitle.style.visibility = "hidden";
@@ -200,7 +227,7 @@ export function initHeroScene(canvas, container) {
   window.addEventListener("resize", resize);
 
   const clock = new THREE.Clock();
-  let rafId;
+  let rafId = null;
   const tick = () => {
     const t = clock.getElapsedTime();
     smoothedMouse.lerp(targetMouse, MOUSE_EASE);
@@ -218,8 +245,27 @@ export function initHeroScene(canvas, container) {
   };
   tick();
 
+  // This canvas competes for GPU/CPU with 4 autoplay video tiles further
+  // down the page -- no reason to keep rendering it once scrolled out of
+  // view. clock.getElapsedTime() naturally accounts for the paused gap
+  // (it's wall-clock elapsed, not frame-counted), so resuming doesn't
+  // cause a time jump in the idle-drift/swirl motion.
+  const visibilityObserver = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting && rafId === null) {
+        tick();
+      } else if (!entry.isIntersecting && rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    },
+    { threshold: 0 },
+  );
+  visibilityObserver.observe(container);
+
   return () => {
-    cancelAnimationFrame(rafId);
+    visibilityObserver.disconnect();
+    if (rafId !== null) cancelAnimationFrame(rafId);
     container.removeEventListener("pointermove", onPointerMove);
     container.removeEventListener("pointerleave", onPointerLeave);
     window.removeEventListener("resize", resize);
