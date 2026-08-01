@@ -9,8 +9,8 @@ This repository has **no standalone orchestrator process**. There is no server, 
 3. For each stage in the manifest's `stages` list, in order:
    - Read that stage's `skill` path under `skills/pipelines/<pipeline>/<stage-name>-director.md` (or `executive-producer.md` for the first stage) before doing any work in that stage.
    - Gather `required_artifacts_in` from prior stage checkpoints (`lib/checkpoint.py::read_checkpoint(project_id, stage)`).
-   - If the stage needs a tool, query `tools/tool_registry.py::ToolRegistry` by capability and call `tool.execute(...)` yourself. Validate the result against the stage's artifact schema in `schemas/artifacts/` before checkpointing.
-   - Do whatever the stage's `review_focus` asks before moving on — as of M4 there's no automated gate function for this yet (that's M5's job; each stage-director doc says so explicitly where it applies), so do it by hand: read the output back, don't just trust a zero exit code.
+   - If the stage needs a tool, query `tools/tool_registry.py::ToolRegistry` by capability and call `tool.execute(...)` yourself. Validate the result against the stage's artifact schema via `lib/quality_gates.py::validate_artifact(produces, artifact)` before checkpointing.
+   - Do whatever the stage's `review_focus` asks before moving on. `scene_plan` has an automated gate (`lib/quality_gates.py::run_scene_plan_gates()` — structural/repetition/pacing checks; a `"fail"` finding blocks moving to `assets`). Other stages don't have a scriptable equivalent yet (visual review of a render isn't something a JSON check can do) — read the output back by hand, don't just trust a zero exit code.
    - Write a checkpoint via `lib/checkpoint.py::write_checkpoint(project_id, pipeline, stage, status, artifact=...)`. Never skip a `checkpoint_required: true` stage.
 4. On resume (new conversation, same project), call `lib/checkpoint.py::get_next_stage(manifest, project_id)` to find where to continue — don't restart from scratch.
 

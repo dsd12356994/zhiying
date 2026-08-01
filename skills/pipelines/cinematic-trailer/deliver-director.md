@@ -4,13 +4,11 @@ Produce `final_delivery` (`schemas/artifacts/final_delivery.schema.json`): `{ fi
 
 ## Before checkpointing this stage
 
-A real pre-delivery quality gate (slideshow-risk scoring, scene-variation checks, schema-validated review) is **M5 work and doesn't exist yet** — don't skip the review step, just do it manually for now:
+The structural/repetition/pacing gate (`lib/quality_gates.py::run_scene_plan_gates()`) already ran at `scene_plan` — if it didn't pass then, it shouldn't have gotten this far. That gate is deliberately scoped to what's checkable from the JSON alone (types, timing, schema shape); it can't tell you whether the render actually *looks* right, so still do this by hand:
 
-- Does the rendered video match what `scene_plan` said it would be? Pull a still from each cut's midpoint (`npx remotion still ... --frame=N`) and actually look at it — M2 caught two real bugs this way that a clean exit code would have missed.
+- Does the rendered video match what `scene_plan` said it would be? Pull a still from each cut's midpoint (`npx remotion still ... --frame=N`) and actually look at it — M2 caught two real bugs this way (color-management darkening, a camera-framing bug) that a clean exit code and a passing schema check both missed.
 - Does it match the brief's `signature_moment`? If the particle burst or shader transition was supposed to be the emotional beat and it reads as flat, that's a `scene_plan` problem to send back, not something to ship anyway.
 
 ## Delivery
 
 Copy (don't move — keep the working copy in `generated/pipelines/<project_id>/`) the render to the configured `output.dir` from `config.yaml`, named meaningfully (not the raw project_id if the brief gives you something better to call it). Set `final_path` to that copy's location.
-
-Once M5 lands, this stage's `review_focus` gate runs *before* this step, not after — update this doc's checklist to point at the real gate functions instead of the manual list above.

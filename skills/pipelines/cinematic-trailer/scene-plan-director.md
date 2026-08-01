@@ -11,11 +11,19 @@ Turn the `brief` artifact into a `scene_plan` artifact: `{ fps, width, height, c
 | `shader_transition` | a mood/scene shift (e.g. dark → brand color) | using it as an opener — it needs something before and after to transition *between* |
 | `text_card` | copy that needs to be read (taglines, stats, CTAs) | using it for everything — it's the cheapest-looking cut, don't let the plan lean on it |
 
-## Rules (enforced by `success_criteria` in the manifest, check them yourself before checkpointing)
+## Rules -- run the real gate, don't eyeball this
 
-- Cuts' `durationInFrames` must sum to `brief.duration_seconds * fps` within one second.
-- No two consecutive cuts share a `type`.
-- At least one cut must be `three_text_intro`, `particle_burst`, or `shader_transition` — a scene plan that's all `text_card` isn't using this pipeline for what it's for.
+The `success_criteria` in the manifest are enforced by `lib/quality_gates.py::run_scene_plan_gates()`, not just documented. Call it before checkpointing:
+
+```python
+from lib.quality_gates import run_scene_plan_gates
+
+report = run_scene_plan_gates(scene_plan, expected_duration_seconds=brief["duration_seconds"])
+if not report.passed:
+    ...  # fix the plan; report.findings has one message per problem, severity "fail" or "warning"
+```
+
+It checks: cuts' `durationInFrames` sum to `brief.duration_seconds * fps` within one second; no two consecutive cuts share a `type`; at least one cut is `three_text_intro`, `particle_burst`, or `shader_transition` (a plan that's all `text_card` isn't using this pipeline for what it's for); and per-cut pacing against the timing conventions below (warnings, not hard failures). A `"fail"` finding means don't proceed to `assets` until it's fixed.
 
 ## Timing conventions (30fps)
 
