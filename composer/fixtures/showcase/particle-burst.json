@@ -1,0 +1,14 @@
+{
+  "fps": 30,
+  "width": 960,
+  "height": 540,
+  "cuts": [
+    {
+      "type": "particle_burst",
+      "durationInFrames": 60,
+      "particleCount": 2200,
+      "color": "#a78bfa",
+      "background": "#05050a"
+    }
+  ]
+}

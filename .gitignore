@@ -30,5 +30,13 @@ __pycache__
 .venv
 .pytest_cache
 
-# Pipeline runtime output (checkpoints, rendered videos, downloaded assets)
-generated/
+# Pipeline runtime output (checkpoints, rendered videos, downloaded assets).
+# Ignored per-subdirectory rather than the whole generated/ tree so
+# generated/showcase/ (the dashboard's effects gallery clips -- small seed
+# assets needed on a fresh clone, not per-project ephemeral output) stays
+# tracked without needing a git negation pattern (those don't work once a
+# parent directory is itself excluded).
+generated/pipelines/
+generated/assets/
+generated/output/
+generated/checkpoints/

@@ -6,122 +6,222 @@
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #0b0b12;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(167,139,250,0.14), transparent 60%),
+      radial-gradient(900px 500px at 90% 0%, rgba(125,211,252,0.08), transparent 55%),
+      #07070d;
     color: #e8e8ff;
-    display: flex;
-    height: 100vh;
+    min-height: 100vh;
   }
+  .muted { color: #8a8aa8; font-size: 13px; }
+
+  /* ---------- hero ---------- */
+  .hero {
+    padding: 56px 40px 32px;
+    text-align: center;
+  }
+  .hero-title {
+    font-size: 40px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin: 0;
+    background: linear-gradient(90deg, #e8e8ff 10%, #a78bfa 55%, #7dd3fc 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero-sub { margin-top: 8px; font-size: 14px; color: #9d9dc0; }
+
+  /* ---------- showcase ---------- */
+  .showcase { padding: 8px 40px 40px; max-width: 1280px; margin: 0 auto; }
+  .showcase-heading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
+  .showcase-heading h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 1.2px; color: #c4b5fd; margin: 0; font-weight: 700; }
+  .showcase-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+  }
+  .effect-card {
+    background: #0e0e18;
+    border: 1px solid #232336;
+    border-radius: 14px;
+    overflow: hidden;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+  .effect-card:hover {
+    transform: translateY(-3px);
+    border-color: #4c3d8f;
+    box-shadow: 0 12px 32px -12px rgba(124, 58, 237, 0.45);
+  }
+  .effect-card video { width: 100%; aspect-ratio: 16/9; display: block; background: #000; object-fit: cover; }
+  .effect-card-body { padding: 14px 16px 16px; }
+  .effect-card-name { font-size: 14px; font-weight: 700; }
+  .effect-card-desc { font-size: 12px; color: #8a8aa8; margin-top: 4px; line-height: 1.5; }
+  .effect-card-tag {
+    display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .4px;
+    text-transform: uppercase; color: #a78bfa; background: rgba(167,139,250,0.12);
+    border-radius: 5px; padding: 2px 6px; margin-top: 8px;
+  }
+
+  /* ---------- workspace ---------- */
+  .workspace { display: flex; border-top: 1px solid #1a1a2c; }
   aside {
     width: 320px;
-    border-right: 1px solid #232336;
-    padding: 20px;
+    border-right: 1px solid #1a1a2c;
+    padding: 24px;
     overflow-y: auto;
     flex-shrink: 0;
+    max-height: calc(100vh - 260px);
   }
-  main {
-    flex: 1;
-    padding: 32px;
-    overflow-y: auto;
-  }
-  h1 { font-size: 18px; margin: 0 0 16px; }
-  h2 { font-size: 22px; margin: 0 0 4px; }
-  .muted { color: #8888a8; font-size: 13px; }
+  main { flex: 1; padding: 32px 40px; overflow-y: auto; max-height: calc(100vh - 260px); }
+  aside h1 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #c4b5fd; margin: 0 0 14px; font-weight: 700; }
+  main h2 { font-size: 22px; margin: 0 0 4px; }
+
   .project-item {
-    padding: 10px 12px;
-    border-radius: 8px;
+    padding: 12px 14px;
+    border-radius: 10px;
     cursor: pointer;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
     font-size: 14px;
+    border: 1px solid transparent;
+    transition: background .15s ease, border-color .15s ease;
   }
-  .project-item:hover { background: #16162a; }
-  .project-item.active { background: #241f3d; }
+  .project-item:hover { background: #14142280; }
+  .project-item.active { background: #1c1733; border-color: #3d3268; }
   .project-item .bar {
-    height: 4px;
-    border-radius: 2px;
-    background: #232336;
-    margin-top: 6px;
-    overflow: hidden;
+    height: 4px; border-radius: 2px; background: #1e1e30; margin-top: 8px; overflow: hidden;
   }
-  .project-item .bar > div { height: 100%; background: #a78bfa; }
-  form { margin-top: 24px; border-top: 1px solid #232336; padding-top: 16px; }
-  label { display: block; font-size: 12px; color: #8888a8; margin: 10px 0 4px; }
+  .project-item .bar > div { height: 100%; background: linear-gradient(90deg, #a78bfa, #7dd3fc); }
+
+  form { margin-top: 26px; border-top: 1px solid #1a1a2c; padding-top: 18px; }
+  form > .form-title { font-size: 13px; font-weight: 700; color: #e8e8ff; }
+  label { display: block; font-size: 11px; color: #8a8aa8; margin: 12px 0 5px; text-transform: uppercase; letter-spacing: .4px; }
   input, textarea {
     width: 100%;
-    background: #16162a;
-    border: 1px solid #232336;
-    border-radius: 6px;
+    background: #14141f;
+    border: 1px solid #262640;
+    border-radius: 8px;
     color: #e8e8ff;
-    padding: 8px;
+    padding: 9px 10px;
     font-size: 13px;
     font-family: inherit;
   }
+  input:focus, textarea:focus { outline: none; border-color: #a78bfa; }
   button {
-    background: #a78bfa;
+    background: linear-gradient(135deg, #a78bfa, #8b6ff0);
     color: #0b0b12;
     border: none;
-    border-radius: 6px;
-    padding: 9px 16px;
+    border-radius: 8px;
+    padding: 10px 18px;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
-    margin-top: 12px;
+    margin-top: 14px;
+    transition: filter .15s ease, transform .1s ease;
   }
-  button:hover { background: #c4b5fd; }
-  button:disabled { background: #333350; color: #8888a8; cursor: not-allowed; }
-  button.secondary { background: #232336; color: #e8e8ff; }
-  button.secondary:hover { background: #2e2e48; }
-  .stage-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 0;
-    border-bottom: 1px solid #1a1a2c;
-  }
+  button:hover { filter: brightness(1.1); }
+  button:active { transform: scale(0.98); }
+  button:disabled { background: #26263c; color: #6f6f90; cursor: not-allowed; filter: none; }
+
+  .stage-row { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid #16162280; }
   .stage-icon {
-    width: 22px; height: 22px; border-radius: 50%;
+    width: 24px; height: 24px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 12px; flex-shrink: 0;
+    font-size: 12px; flex-shrink: 0; font-weight: 700;
   }
-  .stage-icon.completed { background: #4ade80; color: #0b0b12; }
-  .stage-icon.pending { background: #232336; color: #8888a8; }
+  .stage-icon.completed { background: #4ade80; color: #05130a; }
+  .stage-icon.pending { background: #1e1e30; color: #6f6f90; }
   .stage-body { flex: 1; }
-  .stage-name { font-size: 14px; font-weight: 600; text-transform: capitalize; }
-  .stage-hint { font-size: 12px; color: #8888a8; margin-top: 2px; }
-  video { width: 100%; max-width: 640px; border-radius: 10px; margin-top: 16px; display: block; }
-  pre {
-    background: #16162a; border-radius: 8px; padding: 12px;
-    font-size: 11px; overflow-x: auto; max-height: 200px; color: #a78bfa;
-  }
-  details summary { cursor: pointer; font-size: 12px; color: #8888a8; margin-top: 6px; }
+  .stage-name { font-size: 14px; font-weight: 700; text-transform: capitalize; }
+  .stage-hint { font-size: 12px; color: #8a8aa8; margin-top: 2px; }
+  main video.render-preview { width: 100%; max-width: 640px; border-radius: 12px; margin-top: 18px; display: block; box-shadow: 0 16px 40px -16px rgba(0,0,0,0.6); }
+  pre { background: #14141f; border-radius: 8px; padding: 12px; font-size: 11px; overflow-x: auto; max-height: 200px; color: #b9a4fc; border: 1px solid #232336; }
+  details summary { cursor: pointer; font-size: 12px; color: #8a8aa8; margin-top: 8px; }
   .error { color: #f87171; font-size: 13px; margin-top: 10px; white-space: pre-wrap; }
-  .empty { color: #8888a8; font-size: 14px; margin-top: 60px; text-align: center; }
+  .empty { color: #6f6f90; font-size: 14px; margin-top: 60px; text-align: center; }
 </style>
 
-<aside>
-  <h1>zhiying</h1>
-  <div class="muted">cinematic-trailer pipeline</div>
-  <div id="project-list"></div>
+<header class="hero">
+  <div class="hero-title">zhiying</div>
+  <div class="hero-sub">Agent-driven cinematic pipeline, built on Remotion</div>
+</header>
 
-  <form id="new-project-form">
-    <div class="muted" style="font-size:13px; font-weight:600; color:#e8e8ff;">New project</div>
-    <label>Topic</label>
-    <input name="topic" required placeholder="Product launch teaser">
-    <label>Tone (optional)</label>
-    <input name="tone" placeholder="confident, cinematic">
-    <label>Duration (seconds)</label>
-    <input name="duration_seconds" type="number" step="0.5" min="1" value="12" required>
-    <label>Signature moment</label>
-    <textarea name="signature_moment" rows="3" required placeholder="The one moment the viewer should feel something at."></textarea>
-    <button type="submit">Create + write brief</button>
-    <div id="new-project-error" class="error"></div>
-  </form>
-</aside>
+<section class="showcase">
+  <div class="showcase-heading">
+    <h2>Effects Layer</h2>
+    <div class="muted">composer/src/effects/ — what a scene_plan cut actually renders</div>
+  </div>
+  <div class="showcase-grid" id="effects-grid"></div>
+</section>
 
-<main id="main">
-  <div class="empty">Select a project, or create a new one.</div>
-</main>
+<div class="workspace">
+  <aside>
+    <h1>Projects</h1>
+    <div id="project-list"></div>
+
+    <form id="new-project-form">
+      <div class="form-title">New project</div>
+      <label>Topic</label>
+      <input name="topic" required placeholder="Product launch teaser">
+      <label>Tone (optional)</label>
+      <input name="tone" placeholder="confident, cinematic">
+      <label>Duration (seconds)</label>
+      <input name="duration_seconds" type="number" step="0.5" min="1" value="12" required>
+      <label>Signature moment</label>
+      <textarea name="signature_moment" rows="3" required placeholder="The one moment the viewer should feel something at."></textarea>
+      <button type="submit">Create + write brief</button>
+      <div id="new-project-error" class="error"></div>
+    </form>
+  </aside>
+
+  <main id="main">
+    <div class="empty">Select a project, or create a new one.</div>
+  </main>
+</div>
 
 <script>
+const EFFECTS = [
+  {
+    name: "3D Text Intro",
+    tag: "@remotion/three",
+    src: "/media/showcase/three-text-intro.mp4",
+    desc: "Extruded 3D typography with bevel + specular lighting, camera dolly and a light sweep -- both plain functions of frame.",
+  },
+  {
+    name: "Particle Burst",
+    tag: "custom GPU shader",
+    src: "/media/showcase/particle-burst.mp4",
+    desc: "2,200 points, seeded-deterministic direction/speed, driven by a single uProgress uniform. No useFrame, no accumulated state.",
+  },
+  {
+    name: "Shader Transition",
+    tag: "GLSL fragment shader",
+    src: "/media/showcase/shader-transition.mp4",
+    desc: "Fullscreen quad, noise-perturbed radial wipe -- the gl-transitions-style effect, authored directly against @remotion/three.",
+  },
+  {
+    name: "Lottie",
+    tag: "@remotion/lottie",
+    src: "/media/showcase/lottie-pulse.mp4",
+    desc: "Vector motion graphics via lottie-web, frame-synced automatically by the official Remotion wrapper.",
+  },
+];
+
+function renderEffectsGrid() {
+  const grid = document.getElementById("effects-grid");
+  grid.innerHTML = EFFECTS.map(fx => `
+    <div class="effect-card">
+      <video src="${fx.src}" autoplay loop muted playsinline></video>
+      <div class="effect-card-body">
+        <div class="effect-card-name">${fx.name}</div>
+        <div class="effect-card-desc">${fx.desc}</div>
+        <span class="effect-card-tag">${fx.tag}</span>
+      </div>
+    </div>
+  `).join("");
+}
+renderEffectsGrid();
+
 const state = { projects: [], selected: null };
 
 async function api(path, options) {
@@ -196,7 +296,7 @@ async function renderMain() {
     <h2>${detail.project_id}</h2>
     <div class="muted">${detail.pipeline}</div>
     ${rows}
-    ${videoSrc ? `<video controls src="${videoSrc}"></video>` : ""}
+    ${videoSrc ? `<video class="render-preview" controls src="${videoSrc}"></video>` : ""}
     <div id="stage-error" class="error"></div>
   `;
 

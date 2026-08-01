@@ -1,0 +1,13 @@
+{
+  "fps": 30,
+  "width": 960,
+  "height": 540,
+  "cuts": [
+    {
+      "type": "shader_transition",
+      "durationInFrames": 60,
+      "fromColor": "#05050a",
+      "toColor": "#7c3aed"
+    }
+  ]
+}

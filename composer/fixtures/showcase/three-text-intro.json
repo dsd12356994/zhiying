@@ -1,0 +1,14 @@
+{
+  "fps": 30,
+  "width": 960,
+  "height": 540,
+  "cuts": [
+    {
+      "type": "three_text_intro",
+      "durationInFrames": 90,
+      "text": "zhiying",
+      "color": "#e8e8ff",
+      "background": "#05050a"
+    }
+  ]
+}
