@@ -1,0 +1,34 @@
+{
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "cuts": [
+    {
+      "type": "three_text_intro",
+      "durationInFrames": 75,
+      "text": "zhiying",
+      "color": "#e8e8ff",
+      "background": "#05050a"
+    },
+    {
+      "type": "particle_burst",
+      "durationInFrames": 50,
+      "particleCount": 1600,
+      "color": "#7dd3fc",
+      "background": "#05050a"
+    },
+    {
+      "type": "shader_transition",
+      "durationInFrames": 40,
+      "fromColor": "#05050a",
+      "toColor": "#141225"
+    },
+    {
+      "type": "text_card",
+      "durationInFrames": 60,
+      "title": "M2 Effects Layer",
+      "subtitle": "3D text + GPU particles + shader transition, all frame-pure",
+      "background": "#141225"
+    }
+  ]
+}

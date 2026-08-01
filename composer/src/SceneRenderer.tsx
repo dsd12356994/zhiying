@@ -2,17 +2,24 @@ import React from "react";
 import { AbsoluteFill, Sequence } from "remotion";
 import type { CompositionProps, Cut } from "./schema";
 import { TextCard } from "./scenes/TextCard";
+import { TextIntro3D } from "./effects/three/TextIntro3D";
+import { ParticleBurst } from "./effects/three/ParticleBurst";
+import { ShaderTransition } from "./effects/shaders/ShaderTransition";
 
 const renderCut = (cut: Cut): React.ReactElement => {
   switch (cut.type) {
     case "text_card":
       return <TextCard {...cut} />;
-    default:
-      // Cut has only one variant so far, so it isn't a real TS union yet and
-      // can't be exhaustiveness-checked via `never`. M2 adds particle/shader/3D
-      // variants alongside text_card — restore a `const x: never = cut` check
-      // here once Cut is a true union again.
-      throw new Error(`Unhandled cut type: ${JSON.stringify(cut)}`);
+    case "three_text_intro":
+      return <TextIntro3D {...cut} />;
+    case "particle_burst":
+      return <ParticleBurst {...cut} />;
+    case "shader_transition":
+      return <ShaderTransition {...cut} />;
+    default: {
+      const neverCut: never = cut;
+      throw new Error(`Unhandled cut type: ${JSON.stringify(neverCut)}`);
+    }
   }
 };
 

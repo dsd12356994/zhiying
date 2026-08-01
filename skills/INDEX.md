@@ -16,4 +16,7 @@ Three-layer knowledge architecture. Read in this order when starting any stage o
 
 ## Current core/creative skills
 
-*(empty — populated as M2–M5 land; core guides for the new effects layer — `three-particles.md`, `shader-transitions.md`, `vector-motion.md` — should be added alongside the components they document, not written speculatively ahead of the code.)*
+- `skills/core/three-particles.md` — frame-purity rules, the color-management gotcha, and the fullscreen-quad shader pattern for `composer/src/effects/three/` and `effects/shaders/`.
+- `skills/core/vector-motion.md` — Lottie/Rive wrapper usage (`effects/vector/`), including the Bodymovin easing gotcha that looks like a determinism bug but isn't.
+
+*(creative/ and remaining core/ guides populated as M3–M5 land.)*

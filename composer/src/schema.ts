@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 // Each scene type gets one literal-discriminated schema entry here.
-// M2 adds particle/shader/3D cut types alongside this one — same union, same dispatch pattern.
 export const textCardCutSchema = z.object({
   type: z.literal("text_card"),
   durationInFrames: z.number().int().positive(),
@@ -10,7 +9,35 @@ export const textCardCutSchema = z.object({
   background: z.string().default("#0b0b12"),
 });
 
-export const cutSchema = z.discriminatedUnion("type", [textCardCutSchema]);
+export const threeTextIntroCutSchema = z.object({
+  type: z.literal("three_text_intro"),
+  durationInFrames: z.number().int().positive(),
+  text: z.string(),
+  color: z.string().default("#e8e8ff"),
+  background: z.string().default("#05050a"),
+});
+
+export const particleBurstCutSchema = z.object({
+  type: z.literal("particle_burst"),
+  durationInFrames: z.number().int().positive(),
+  particleCount: z.number().int().positive().default(1200),
+  color: z.string().default("#7dd3fc"),
+  background: z.string().default("#05050a"),
+});
+
+export const shaderTransitionCutSchema = z.object({
+  type: z.literal("shader_transition"),
+  durationInFrames: z.number().int().positive(),
+  fromColor: z.string().default("#05050a"),
+  toColor: z.string().default("#0b0b12"),
+});
+
+export const cutSchema = z.discriminatedUnion("type", [
+  textCardCutSchema,
+  threeTextIntroCutSchema,
+  particleBurstCutSchema,
+  shaderTransitionCutSchema,
+]);
 export type Cut = z.infer<typeof cutSchema>;
 
 export const compositionPropsSchema = z.object({
