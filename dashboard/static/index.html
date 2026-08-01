@@ -28,12 +28,15 @@
   ::selection { background: var(--accent); color: #fff; }
 
   /* ---------- hero ---------- */
-  .hero { padding: 72px 0 40px; animation: rise .6s ease both; }
+  .hero { position: relative; padding: 72px 0 40px; animation: rise .6s ease both; overflow: hidden; }
+  #hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: auto; }
   .hero-eyebrow {
+    position: relative; z-index: 1; pointer-events: none;
     font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
     color: var(--dim); margin: 0 0 18px;
   }
   .hero-title {
+    position: relative; z-index: 1; pointer-events: none;
     font-size: clamp(56px, 9vw, 128px);
     line-height: 0.92;
     font-weight: 700;
@@ -42,6 +45,7 @@
     color: var(--fg);
   }
   .hero-sub {
+    position: relative; z-index: 1; pointer-events: none;
     margin-top: 20px; max-width: 560px; font-size: 15px; line-height: 1.6; color: #b8b8b2;
   }
   @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
@@ -157,6 +161,7 @@
 
 <div class="wrap">
   <header class="hero">
+    <canvas id="hero-canvas"></canvas>
     <div class="hero-eyebrow mono">AGENT-DRIVEN VIDEO PIPELINE</div>
     <h1 class="hero-title display">zhiying</h1>
     <p class="hero-sub">Describe a video, an agent authors and checkpoints it stage by stage, Remotion renders it. No manual timeline editing. The panel below is the effects layer actually doing the work — not a mockup.</p>
@@ -362,3 +367,4 @@ document.getElementById("new-project-form").onsubmit = async (e) => {
 
 refreshProjects();
 </script>
+<script type="module" src="/static/hero-scene.js"></script>

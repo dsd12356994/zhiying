@@ -34,6 +34,7 @@ PIPELINE_NAME = "cinematic-trailer"
 app = FastAPI(title="zhiying dashboard")
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/media", StaticFiles(directory=GENERATED_DIR), name="media")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 def _load_config() -> dict[str, Any]:
