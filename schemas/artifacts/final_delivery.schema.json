@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "final_delivery.schema.json",
+  "title": "Final delivery",
+  "type": "object",
+  "required": ["final_path"],
+  "properties": {
+    "final_path": { "type": "string" },
+    "notes": { "type": "string" }
+  }
+}

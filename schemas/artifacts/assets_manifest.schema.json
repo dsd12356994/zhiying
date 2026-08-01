@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "assets_manifest.schema.json",
+  "title": "Assets manifest",
+  "type": "object",
+  "properties": {
+    "narration_audio_path": { "type": ["string", "null"], "default": null },
+    "music_audio_path": { "type": ["string", "null"], "default": null },
+    "footage_paths": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    }
+  }
+}

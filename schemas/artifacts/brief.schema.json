@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "brief.schema.json",
+  "title": "Brief",
+  "type": "object",
+  "required": ["topic", "duration_seconds", "signature_moment"],
+  "properties": {
+    "topic": { "type": "string" },
+    "tone": { "type": "string" },
+    "duration_seconds": { "type": "number", "exclusiveMinimum": 0 },
+    "signature_moment": {
+      "type": "string",
+      "description": "The one moment that should make the viewer feel something. Named before any scene is written -- see skills/pipelines/cinematic-trailer/executive-producer.md."
+    }
+  }
+}

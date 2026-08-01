@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "render.schema.json",
+  "title": "Render",
+  "type": "object",
+  "required": ["output_path", "props_path"],
+  "properties": {
+    "output_path": { "type": "string" },
+    "props_path": { "type": "string" },
+    "duration_seconds": { "type": "number" }
+  }
+}

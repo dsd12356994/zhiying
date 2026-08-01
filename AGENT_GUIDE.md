@@ -7,18 +7,20 @@ This repository has **no standalone orchestrator process**. There is no server, 
 1. Read `skills/INDEX.md` first — it routes you to the right skill layer for whatever you're about to do.
 2. Pick (or ask the user to confirm) a pipeline manifest from `pipeline_defs/`. Load it with `lib/pipeline_loader.py::load_pipeline(name)`.
 3. For each stage in the manifest's `stages` list, in order:
-   - Read that stage's `skill` path under `skills/pipelines/<pipeline>/<stage>-director.md` before doing any work in that stage.
-   - Gather `required_artifacts_in` from prior stage outputs.
-   - Call tools via `tools/tool_registry.py::ToolRegistry` — query by capability, pick a provider (see `lib/scoring.py` for how to rank candidates when more than one tool matches), execute, validate the result against the stage's artifact schema in `schemas/artifacts/`.
-   - Run any quality gate listed in the stage's `review_focus` (see `lib/` quality-check functions) before moving on. Never skip a `checkpoint_required: true` stage.
-   - Write a checkpoint via `lib/checkpoint.py::write_checkpoint(...)`.
-4. On resume (new conversation, same project), call `lib/checkpoint.py::get_next_stage(project_id)` to find where to continue — don't restart from scratch.
+   - Read that stage's `skill` path under `skills/pipelines/<pipeline>/<stage-name>-director.md` (or `executive-producer.md` for the first stage) before doing any work in that stage.
+   - Gather `required_artifacts_in` from prior stage checkpoints (`lib/checkpoint.py::read_checkpoint(project_id, stage)`).
+   - If the stage needs a tool, query `tools/tool_registry.py::ToolRegistry` by capability and call `tool.execute(...)` yourself. Validate the result against the stage's artifact schema in `schemas/artifacts/` before checkpointing.
+   - Do whatever the stage's `review_focus` asks before moving on — as of M4 there's no automated gate function for this yet (that's M5's job; each stage-director doc says so explicitly where it applies), so do it by hand: read the output back, don't just trust a zero exit code.
+   - Write a checkpoint via `lib/checkpoint.py::write_checkpoint(project_id, pipeline, stage, status, artifact=...)`. Never skip a `checkpoint_required: true` stage.
+4. On resume (new conversation, same project), call `lib/checkpoint.py::get_next_stage(manifest, project_id)` to find where to continue — don't restart from scratch.
 
 ## Ground rules
 
 - Python code in `tools/` and `lib/` is infrastructure and persistence only. It does not decide *what* to do next — you do, by reading manifests and skills.
-- Every composition rendered through `composer/` must be a pure function of `frame` (Remotion renders frames independently, possibly in parallel). Never drive `composer/src/effects/three/*` with R3F's `useFrame()` or any clock/delta-time accumulation — use `useCurrentFrame()` and inject time as a uniform.
+- Every composition rendered through `composer/` must be a pure function of `frame` (Remotion renders frames independently, possibly in parallel). Never drive `composer/src/effects/three/*` with R3F's `useFrame()` or any clock/delta-time accumulation — use `useCurrentFrame()` and inject time as a uniform. See `skills/core/three-particles.md` for two real bugs this caused.
 - No WhatsApp/messaging layer exists in this repo by design — this is a headless, conversation-driven pipeline. Don't add a webhook/server layer without the user explicitly asking for one.
-- Budget and provider choices should go through `lib/scoring.py`'s ranking rather than hardcoding a provider.
+- `lib/scoring.py` (provider ranking when multiple tools share a capability) doesn't exist yet — every capability currently has exactly one provider, so there's nothing to rank. Build it when a second provider for the same capability actually gets added, not before.
 
-*(This file will grow as pipelines are added in M4 — currently only `cinematic-trailer` exists.)*
+## Current pipelines
+
+- `cinematic-trailer` (`pipeline_defs/cinematic-trailer.yaml`, `skills/pipelines/cinematic-trailer/`) — the only one that exists. 15–30s cinematic/trailer style, built to exercise the `composer/src/effects/` layer.

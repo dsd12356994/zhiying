@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pipeline_manifest.schema.json",
+  "title": "Pipeline manifest",
+  "type": "object",
+  "required": ["name", "stages"],
+  "properties": {
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "orchestration": {
+      "type": "object",
+      "properties": {
+        "mode": { "type": "string" },
+        "budget_default_usd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "required_skills": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "skill", "produces"],
+        "properties": {
+          "name": { "type": "string" },
+          "skill": {
+            "type": "string",
+            "description": "Path under skills/ (without .md) the agent must read before working this stage."
+          },
+          "required_artifacts_in": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": []
+          },
+          "produces": {
+            "type": "string",
+            "description": "Name of the artifact this stage writes, checkpointed under that name."
+          },
+          "required_tools": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": []
+          },
+          "optional_tools": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": []
+          },
+          "checkpoint_required": { "type": "boolean", "default": true },
+          "human_approval_default": { "type": "boolean", "default": false },
+          "review_focus": { "type": "string" },
+          "success_criteria": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

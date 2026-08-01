@@ -12,7 +12,7 @@ Three-layer knowledge architecture. Read in this order when starting any stage o
 
 ## Current pipelines
 
-- `skills/pipelines/cinematic-trailer/` — flagship style, 15–30s, 3D/particle/shader-heavy. (Being built in M4.)
+- `skills/pipelines/cinematic-trailer/` — flagship style, 15–30s, 3D/particle/shader-heavy. Manifest: `pipeline_defs/cinematic-trailer.yaml`. Stages: `brief` → `scene_plan` → `assets` → `compose` → `deliver`.
 
 ## Current core/creative skills
 
