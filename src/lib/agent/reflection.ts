@@ -2,14 +2,29 @@ import type { AgentProvider, ToolExecutionObservation } from "./llmAgent";
 
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 const DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions";
+const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
+const ANTHROPIC_VERSION = "2023-06-01";
 const FAILURE_CASES_KEY = "zhiying.agent.failureCases.v1";
 const MAX_FAILURE_CASES = 200;
 
-function getReflectionProviderConfig(provider: AgentProvider): {
-  apiUrl: string;
-  apiKey: string;
-  model: string;
-} | null {
+interface ReflectionProviderConfig { apiUrl: string; apiKey: string; model: string }
+
+function getReflectionProviderConfig(provider: AgentProvider): ReflectionProviderConfig | null {
+  // Runtime config (localStorage) takes priority over env vars
+  try {
+    const raw = typeof window !== "undefined" ? window.localStorage.getItem("zhiying.aiConfig.v1") : null;
+    if (raw) {
+      const cfg = JSON.parse(raw) as Record<string, Record<string, string> | undefined>;
+      const pKey = provider as "openai" | "deepseek" | "claude";
+      const p = cfg[pKey];
+      if (p?.apiKey) {
+        const defaultUrls: Record<string, string> = { openai: OPENAI_API_URL, deepseek: DEEPSEEK_API_URL, claude: CLAUDE_API_URL };
+        const defaultModels: Record<string, string> = { openai: "gpt-4.1-mini", deepseek: "deepseek-chat", claude: "claude-sonnet-4-6" };
+        return { apiKey: p.apiKey, model: p.model || defaultModels[pKey], apiUrl: p.apiUrl || defaultUrls[pKey] };
+      }
+    }
+  } catch { /* ignore */ }
+
   if (provider === "openai") {
     const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
     if (!apiKey) return null;
@@ -23,8 +38,7 @@ function getReflectionProviderConfig(provider: AgentProvider): {
     const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY as string | undefined;
     if (!apiKey) return null;
     return {
-      apiUrl:
-        (import.meta.env.VITE_DEEPSEEK_API_URL as string | undefined) || DEEPSEEK_API_URL,
+      apiUrl: (import.meta.env.VITE_DEEPSEEK_API_URL as string | undefined) || DEEPSEEK_API_URL,
       apiKey,
       model: (import.meta.env.VITE_DEEPSEEK_MODEL as string | undefined) || "deepseek-chat",
     };
@@ -100,30 +114,44 @@ export async function reflectOnExecution(
     .map((f) => `${f.name}(${f.message})`)
     .join("；")}。建议检查参数范围、片段选择状态，并在必要时先分割再删除。`;
 
-  if (provider !== "openai" && provider !== "deepseek") return fallback;
+  if (provider !== "openai" && provider !== "deepseek" && provider !== "claude") return fallback;
   const config = getReflectionProviderConfig(provider);
   if (!config) return fallback;
 
+  const systemPrompt = "你是视频编辑 Agent 的反思器。请分析失败原因并给出最多三条可执行修正建议，简洁中文。";
+  const userContent = JSON.stringify({ userInput, observations });
+
   try {
-    const response = await fetch(config.apiUrl, {
+    let response: Response;
+    if (provider === "claude") {
+      response = await fetch(config.apiUrl || CLAUDE_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": config.apiKey,
+          "anthropic-version": ANTHROPIC_VERSION,
+        },
+        body: JSON.stringify({
+          model: config.model,
+          max_tokens: 256,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userContent }],
+        }),
+      });
+      if (!response.ok) return fallback;
+      const data = (await response.json()) as { content?: Array<{ type: string; text?: string }> };
+      return data.content?.find((b) => b.type === "text")?.text?.trim() || fallback;
+    }
+
+    response = await fetch(config.apiUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${config.apiKey}`,
-      },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
       body: JSON.stringify({
         model: config.model,
         temperature: 0.2,
         messages: [
-          {
-            role: "system",
-            content:
-              "你是视频编辑 Agent 的反思器。请分析失败原因并给出最多三条可执行修正建议，简洁中文。",
-          },
-          {
-            role: "user",
-            content: JSON.stringify({ userInput, observations }),
-          },
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
         ],
       }),
     });

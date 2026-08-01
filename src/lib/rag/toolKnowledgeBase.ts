@@ -27,6 +27,13 @@ const MARKDOWN_DOCS = import.meta.glob("../tools/knowledge/*.md", {
   eager: true,
 }) as MarkdownModuleMap;
 
+// Agent skill files — teach multi-step editing patterns
+const SKILL_DOCS = import.meta.glob("../agent/skills/*.md", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as MarkdownModuleMap;
+
 function inferName(path: string, content: string): string {
   const heading = content.match(/^#\s+([A-Za-z0-9_/-]+)/m)?.[1]?.trim();
   if (heading) return heading;
@@ -37,67 +44,81 @@ function inferName(path: string, content: string): string {
 function defaultKeywords(name: string): string[] {
   const lowered = name.toLowerCase();
   switch (lowered) {
-    case "splitclip":
-    case "splitatplayhead":
-      return ["分割", "切分", "split", "切开"];
-    case "trimclip":
-    case "trimto":
-    case "trimlast":
-      return ["裁剪", "trim", "删除最后", "保留前", "起点", "终点"];
-    case "deleteclip":
-      return ["删除", "delete", "去掉", "闭合间隙", "ripple"];
-    case "moveclip":
-      return ["移动", "挪动", "move", "位置", "轨道"];
-    case "exportvideo":
-      return ["导出", "export", "下载"];
-    case "undo":
-      return ["撤销", "undo", "回退"];
-    case "redo":
-      return ["重做", "redo", "恢复"];
-    default:
-      return [name.toLowerCase()];
+    case "searchweb": return ["搜索", "查找", "search", "检索", "资料", "research", "保险", "金融", "移民", "政策"];
+    case "generatescript": return ["脚本", "文案", "台词", "script", "生成", "稿子", "话题", "topic"];
+    case "synthesizespeech": return ["语音", "配音", "朗读", "tts", "speech", "声音", "念", "播报"];
+    case "generateavatar": return ["数字人", "头像", "口播", "avatar", "heygen", "人像", "照片", "开口"];
+    case "composevideo": return ["合成", "组合", "compose", "拼接", "最终视频", "成品"];
+    case "setbranding": return ["品牌", "水印", "片头", "片尾", "branding", "logo", "标志"];
+    case "splitclip": case "splitatplayhead": return ["分割", "切分", "split"];
+    case "trimclip": case "trimto": case "trimlast": return ["裁剪", "trim", "删除最后", "保留前"];
+    case "deleteclip": return ["删除", "delete", "去掉"];
+    case "moveclip": return ["移动", "挪动", "move", "位置"];
+    case "exportvideo": return ["导出", "export", "下载"];
+    case "undo": return ["撤销", "undo"];
+    case "redo": return ["重做", "redo"];
+    default: return [name.toLowerCase()];
   }
 }
 
 function defaultIntentTags(name: string): string[] {
   const lowered = name.toLowerCase();
   switch (lowered) {
-    case "splitclip":
-    case "splitatplayhead":
-      return ["split"];
-    case "trimclip":
-    case "trimto":
-    case "trimlast":
-      return ["trim"];
-    case "deleteclip":
-      return ["delete"];
-    case "moveclip":
-      return ["move"];
-    case "exportvideo":
-      return ["export"];
-    case "undo":
-      return ["undo"];
-    case "redo":
-      return ["redo"];
-    default:
-      return [];
+    case "searchweb": return ["research", "search"];
+    case "generatescript": return ["script", "generate"];
+    case "synthesizespeech": return ["speech", "tts"];
+    case "generateavatar": return ["avatar", "digitalhuman"];
+    case "composevideo": return ["compose", "assemble"];
+    case "setbranding": return ["brand", "branding"];
+    case "splitclip": case "splitatplayhead": return ["split"];
+    case "trimclip": case "trimto": case "trimlast": return ["trim"];
+    case "deleteclip": return ["delete"];
+    case "moveclip": return ["move"];
+    case "exportvideo": return ["export"];
+    case "undo": return ["undo"];
+    case "redo": return ["redo"];
+    default: return [];
   }
 }
 
 function detectIntentTags(query: string): string[] {
   const q = query.toLowerCase();
   const tags = new Set<string>();
+  // Insurance knowledge video intents
+  if (/(视频|vide|科普|分享|知识|制作|生成|创建|做|拍|弄|来一个)/i.test(q)) tags.add("video");
+  if (/(搜索|查|搜|资料|research|search|最新|规定|政策)/i.test(q)) tags.add("research");
+  if (/(脚本|文案|台词|写|稿子|script)/i.test(q)) tags.add("script");
+  if (/(语音|配音|朗读|念|声音|播|tts|speech)/i.test(q)) tags.add("speech");
+  if (/(数字人|头像|口播|heygen|人像|照片|avatar)/i.test(q)) tags.add("avatar");
+  if (/(品牌|水印|片头|片尾|brand|logo)/i.test(q)) tags.add("brand");
+  if (/(保险|重疾|医疗|寿险|理财|养老|移民|金融)/i.test(q)) tags.add("insurance");
+  // Basic editing intents (kept)
   if (/(分割|切分|切开|split)/i.test(q)) tags.add("split");
-  if (/(裁剪|trim|删除最后|保留前|起点|终点)/i.test(q)) tags.add("trim");
+  if (/(裁剪|trim|删除最后)/i.test(q)) tags.add("trim");
   if (/(删除|delete|去掉|移除)/i.test(q)) tags.add("delete");
-  if (/(移动|挪到|move|轨道)/i.test(q)) tags.add("move");
   if (/(导出|export|下载)/i.test(q)) tags.add("export");
-  if (/(撤销|undo|回退)/i.test(q)) tags.add("undo");
-  if (/(重做|redo|恢复)/i.test(q)) tags.add("redo");
+  if (/(滤镜|调色|风格|颜色|color|grade)/i.test(q)) tags.add("colorgrade");
+  if (/(字幕|文字|标题|subtitle|caption)/i.test(q)) tags.add("subtitle");
   return Array.from(tags);
 }
 
-const KNOWLEDGE_BASE: ToolKnowledge[] = Object.entries(MARKDOWN_DOCS).map(
+function skillKeywords(name: string): string[] {
+  const map: Record<string, string[]> = {
+    "avatar-workflow": ["视频", "数字人", "知识分享", "科普", "保险", "金融", "移民", "avatar", "digital human", "口播", "脚本", "语音", "配音", "生成视频"],
+    "insurance-script-guide": ["脚本", "文案", "台词", "script", "保险", "重疾", "医疗", "养老", "理赔", "科普", "分享", "怎么写", "内容"],
+  };
+  return map[name] ?? [name.toLowerCase()];
+}
+
+function skillIntentTags(name: string): string[] {
+  const map: Record<string, string[]> = {
+    "avatar-workflow": ["video", "avatar", "script", "speech", "research", "brand", "insurance"],
+    "insurance-script-guide": ["script", "insurance"],
+  };
+  return map[name] ?? [];
+}
+
+const TOOL_KNOWLEDGE: ToolKnowledge[] = Object.entries(MARKDOWN_DOCS).map(
   ([path, content]) => {
     const name = inferName(path, content);
     return {
@@ -108,6 +129,20 @@ const KNOWLEDGE_BASE: ToolKnowledge[] = Object.entries(MARKDOWN_DOCS).map(
     };
   }
 );
+
+const SKILL_KNOWLEDGE: ToolKnowledge[] = Object.entries(SKILL_DOCS).map(
+  ([path, content]) => {
+    const name = inferName(path, content);
+    return {
+      name: `skill:${name}`,
+      content,
+      keywords: skillKeywords(name),
+      intentTags: skillIntentTags(name),
+    };
+  }
+);
+
+const KNOWLEDGE_BASE: ToolKnowledge[] = [...TOOL_KNOWLEDGE, ...SKILL_KNOWLEDGE];
 
 function scoreKnowledge(query: string, item: ToolKnowledge): number {
   const q = query.toLowerCase();
@@ -205,29 +240,27 @@ export async function retrieveRelevantContext(
   return { tools, failureHints };
 }
 
+// Keep knowledge snippets short to reduce prompt token count
+const KNOWLEDGE_SNIPPET_CHARS = 280;
+
 export function enrichPromptWithTools(
   userInput: string,
   relevantTools: ToolKnowledge[],
   failureHints: FailureHint[] = []
 ): string {
   if (!relevantTools.length) {
-    return `用户请求：${userInput}\n未命中工具知识，按通用策略选择工具。`;
+    return `用户请求：${userInput}`;
   }
+  // Truncate each doc to first KNOWLEDGE_SNIPPET_CHARS chars — enough for purpose/params, not the full guide
   const sections = relevantTools.map(
-    (tool, idx) => `#${idx + 1} ${tool.name}\n${tool.content.trim()}`
+    (tool, idx) =>
+      `#${idx + 1} ${tool.name}: ${tool.content.slice(0, KNOWLEDGE_SNIPPET_CHARS).trim()}`
   );
   const failureSection =
     failureHints.length > 0
-      ? `\n\n以下是历史失败修复经验（优先避免重复犯错）：\n${failureHints
-          .map(
-            (hint, idx) =>
-              `- 案例${idx + 1} 工具=${hint.toolName}\n  用户输入=${hint.userInput}\n  反思=${hint.reflection}`
-          )
-          .join("\n")}`
+      ? `\n历史失败：${failureHints.map((h) => `${h.toolName}→${h.reflection}`).join("；")}`
       : "";
-  return `用户请求：${userInput}\n\n以下是检索到的工具知识，请优先依据它们进行参数填充：\n\n${sections.join(
-    "\n\n"
-  )}${failureSection}`;
+  return `用户请求：${userInput}\n工具提示：${sections.join(" | ")}${failureSection}`;
 }
 
 export function getKnowledgeBaseNames(): string[] {

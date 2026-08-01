@@ -8,6 +8,86 @@ import { VideoDecoder } from "../../lib/videoDecoder";
 const BASE_PPS = 80;
 const SNAP_THRESHOLD_PX = 10;
 const TRACK_LABEL_W = 84;
+
+// ── Track label with mute + volume controls for audio tracks ──────────────
+interface TrackLabelProps {
+  index: number;
+  clips: TimelineClip[];
+  language: string;
+  text: { videoTrack: string; audioTrack: string; track: string };
+  onMuteToggle: (clips: TimelineClip[], muted: boolean) => void;
+  onVolumeChange: (clips: TimelineClip[], volume: number) => void;
+}
+
+function trackName(index: number, language: string, text: TrackLabelProps["text"]): string {
+  if (index === 0) return text.videoTrack;
+  if (index === 1) return language === "zh" ? "游戏音频" : "Game Audio";
+  if (index === 2) return language === "zh" ? "BGM 轨" : "BGM";
+  if (index === 3) return language === "zh" ? "音效轨" : "SFX";
+  return `${text.track} ${index + 1}`;
+}
+
+function TrackLabel({ index, clips, language, text, onMuteToggle, onVolumeChange }: TrackLabelProps) {
+  const isAudioTrack = index > 0;
+  const audioClips = clips.filter((c) => c.type !== "text");
+  const allMuted = audioClips.length > 0 && audioClips.every((c) => c.muted);
+  const trackVolume = audioClips[0]?.volume ?? 1;
+  const label = trackName(index, language, text);
+
+  return (
+    <div
+      className="absolute left-0 top-0 flex h-full flex-col justify-center border-r"
+      style={{
+        width: TRACK_LABEL_W,
+        borderColor: "var(--border)",
+        backgroundColor: "var(--bg-primary)",
+        padding: "2px 6px",
+        gap: 3,
+      }}
+    >
+      {/* Row 1: name + mute button */}
+      <div className="flex items-center justify-between">
+        <span className="truncate text-[9px] leading-none" style={{ color: "var(--text-secondary)" }}>
+          {label}
+        </span>
+        {isAudioTrack && (
+          <button
+            type="button"
+            title={allMuted ? (language === "zh" ? "取消静音" : "Unmute") : (language === "zh" ? "静音" : "Mute")}
+            className="flex-shrink-0 rounded px-0.5 text-[9px] leading-none hover:opacity-70"
+            style={{
+              color: allMuted ? "var(--accent)" : "var(--text-secondary)",
+              fontWeight: allMuted ? 700 : 400,
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onMuteToggle(audioClips, !allMuted); }}
+          >
+            {allMuted ? "M" : "●"}
+          </button>
+        )}
+      </div>
+      {/* Row 2: volume slider (audio tracks only) */}
+      {isAudioTrack && (
+        <div className="flex items-center gap-1">
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={Math.round(trackVolume * 100)}
+            title={`${Math.round(trackVolume * 100)}%`}
+            style={{ flex: 1, height: 10, accentColor: "var(--accent)", cursor: "pointer", minWidth: 0 }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onChange={(e) => onVolumeChange(audioClips, Number(e.target.value) / 100)}
+          />
+          <span className="flex-shrink-0 text-right text-[8px]" style={{ color: "var(--text-secondary)", width: 18 }}>
+            {Math.round(trackVolume * 100)}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
 const TRACK_H = 52;
 const TAIL_EXTEND_SEC = 30;
 const EDGE_SCROLL_THRESHOLD_PX = 50;
@@ -114,6 +194,8 @@ export function Timeline() {
     setEditMode,
     pause,
     videoFile,
+    setClipVolume,
+    setClipMuted,
   } = useEditorStore();
   const project = useProjectStore((s) => s.project);
   const language = useSettingsStore((s) => s.language);
@@ -761,7 +843,8 @@ export function Timeline() {
         store.setDuration(Math.max(0.1, item.duration || 1));
       }
       const baseTrack = Math.max(0, getTrackIndexFromClientY(e.clientY));
-      const trackIndex = item.type === "audio" ? Math.max(1, baseTrack) : baseTrack;
+      // track 1 is reserved for auto-extracted game audio; BGM/SFX start at track 2
+      const trackIndex = item.type === "audio" ? Math.max(2, baseTrack) : baseTrack;
       const start = getTimeFromClientX(e.clientX, e.currentTarget);
       const clipLength = Math.max(0.1, item.duration || 1);
       const end = start + clipLength;
@@ -999,21 +1082,14 @@ export function Timeline() {
                 setCurrentTime(t);
               }}
             >
-              <div
-                className="absolute left-0 top-0 flex h-full items-center justify-center border-r text-[10px]"
-                style={{
-                  width: TRACK_LABEL_W,
-                  borderColor: "var(--border)",
-                  color: "var(--text-secondary)",
-                  backgroundColor: "var(--bg-primary)",
-                }}
-              >
-                {track.index === 0
-                  ? text.videoTrack
-                  : track.index === 1
-                    ? text.audioTrack
-                    : `${text.track} ${track.index + 1}`}
-              </div>
+              <TrackLabel
+                index={track.index}
+                clips={track.clips}
+                language={language}
+                text={text}
+                onMuteToggle={(clips, muted) => { for (const c of clips) setClipMuted(c.id, muted); }}
+                onVolumeChange={(clips, v) => { for (const c of clips) setClipVolume(c.id, v); }}
+              />
 
               <div className="relative h-full" style={{ marginLeft: TRACK_LABEL_W }}>
                 {transitionMarkers

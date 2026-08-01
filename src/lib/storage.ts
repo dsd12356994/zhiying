@@ -160,16 +160,20 @@ export function createEmptyEditorSnapshot(duration = 60): PersistedEditorState {
   };
 }
 
-export async function createProjectRecord(name: string): Promise<StoredProjectRecord> {
+export async function createProjectRecord(name: string, videoUrl?: string): Promise<StoredProjectRecord> {
   const now = Date.now();
   const project = createEmptyProject(name);
+  const editorSnapshot = createEmptyEditorSnapshot(60);
+  if (videoUrl) {
+    editorSnapshot.videoSrc = videoUrl;
+  }
   const record: StoredProjectRecord = {
     id: project.id,
     name,
     createdAt: now,
     lastOpened: now,
     project,
-    editor: createEmptyEditorSnapshot(60),
+    editor: editorSnapshot,
   };
   await saveProjectRecord(record);
   return hydrateRecord(record);

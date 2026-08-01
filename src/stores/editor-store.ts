@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import type { ClipFilter, FilterName } from "../lib/filters";
 import { buildFilterCss } from "../lib/filters";
-import { detectBeats } from "../lib/beatDetector";
 
 export type ClipType = "video" | "audio" | "text";
 export type TimeDisplayMode = "clock" | "seconds";
@@ -24,6 +23,8 @@ export interface TimelineClip {
   sourceEnd: number;
   trackIndex: number;
   name?: string;
+  volume?: number; // 0–1, default 1.0
+  muted?: boolean;
   filter?: ClipFilter;
   content?: string;
   fontSize?: number;
@@ -65,6 +66,7 @@ export interface EditorState {
   showFlowTab: boolean;
   showChatBox: boolean;
   showExportDialog: boolean;
+  showTemplatesDialog: boolean;
 
   // 视频与时间轴
   videoFile: File | null;
@@ -100,6 +102,9 @@ export interface EditorState {
   toggleFlowTab: () => void;
   toggleChatBox: () => void;
   toggleExportDialog: () => void;
+  toggleTemplatesDialog: () => void;
+  detectSpikeMoments: (clipId?: string) => Promise<ActionMoment[]>;
+  detectSilenceRegions: (clipId?: string, threshold?: number, minDuration?: number) => Promise<SilenceRegion[]>;
   setExportDialog: (open: boolean) => void;
   setVideoFile: (file: File | null, src?: string | null) => void;
   setCurrentTime: (t: number) => void;
@@ -116,7 +121,7 @@ export interface EditorState {
   setTrimEnd: (t: number) => void;
   setTrimPoints: (start: number, end: number) => void;
   initializeClips: (duration: number, src: string) => void;
-  addClip: (clip: Omit<TimelineClip, "id"> & { id?: string }) => string;
+  addClip: (clip: Omit<TimelineClip, "id"> & { id?: string; skipAudioExtract?: boolean }) => string;
   duplicateClip: (clipId: string) => string | null;
   copyClipToNextTrack: (clipId: string) => string | null;
   rippleMoveClip: (clipId: string, newStart: number) => boolean;
@@ -149,6 +154,8 @@ export interface EditorState {
     >
   ) => boolean;
   setClipSpeed: (clipId: string, speed: number) => boolean;
+  setClipVolume: (clipId: string, volume: number) => boolean;
+  setClipMuted: (clipId: string, muted: boolean) => boolean;
   addKeyframe: (
     clipId: string,
     property: KeyframeProperty,
@@ -320,6 +327,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   showFlowTab: false,
   showChatBox: false,
   showExportDialog: false,
+  showTemplatesDialog: false,
   videoFile: null,
   videoSrc: null,
   currentTime: 0,
@@ -363,6 +371,60 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   toggleChatBox: () => set((s) => ({ showChatBox: !s.showChatBox })),
   toggleExportDialog: () => set((s) => ({ showExportDialog: !s.showExportDialog })),
   setExportDialog: (open) => set({ showExportDialog: open }),
+  toggleTemplatesDialog: () => set((s) => ({ showTemplatesDialog: !s.showTemplatesDialog })),
+
+  detectSpikeMoments: async (clipId) => {
+    const { clips, selectedClipId } = get();
+    const targetId =
+      clipId ??
+      selectedClipId ??
+      clips.find((c) => c.type === "video" || c.type === "audio")?.id;
+    if (!targetId) return [];
+    const clip = clips.find((c) => c.id === targetId);
+    if (!clip) return [];
+    try {
+      const response = await fetch(clip.src);
+      const buf = await response.arrayBuffer();
+      const ctx = new AudioContext();
+      const decoded = await ctx.decodeAudioData(buf.slice(0));
+      const spikes = detectSpikes(decoded);
+      void ctx.close();
+      return spikes
+        .filter((m) => m.ts >= clip.sourceStart && m.ts <= clip.sourceEnd)
+        .map((m) => ({ ...m, ts: clip.start + (m.ts - clip.sourceStart) }))
+        .filter((m) => m.ts >= clip.start && m.ts <= clip.end);
+    } catch {
+      return [];
+    }
+  },
+
+  detectSilenceRegions: async (clipId, threshold = 0.01, minDuration = 0.3) => {
+    const { clips, selectedClipId } = get();
+    const targetId =
+      clipId ??
+      selectedClipId ??
+      clips.find((c) => c.type === "video" || c.type === "audio")?.id;
+    if (!targetId) return [];
+    const clip = clips.find((c) => c.id === targetId);
+    if (!clip) return [];
+    try {
+      const response = await fetch(clip.src);
+      const buf = await response.arrayBuffer();
+      const ctx = new AudioContext();
+      const decoded = await ctx.decodeAudioData(buf.slice(0));
+      const regions = detectSilence(decoded, threshold, minDuration);
+      void ctx.close();
+      return regions
+        .filter((r) => r.start >= clip.sourceStart && r.end <= clip.sourceEnd)
+        .map((r) => ({
+          start: clip.start + (r.start - clip.sourceStart),
+          end: clip.start + (r.end - clip.sourceStart),
+          duration: r.duration,
+        }));
+    } catch {
+      return [];
+    }
+  },
 
   setVideoFile: (file, src = null) => {
     const prevSrc = get().videoSrc;
@@ -478,30 +540,32 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   initializeClips: (duration, src) => {
     pastStack.length = 0;
     futureStack.length = 0;
-    const id = newClipId();
+    const videoId = newClipId();
+    const safeDur = Math.max(MIN_CLIP_DURATION, duration);
     set({
-      duration: Math.max(MIN_CLIP_DURATION, duration),
-      sourceDuration: Math.max(MIN_CLIP_DURATION, duration),
+      duration: safeDur,
+      sourceDuration: safeDur,
       trimStart: 0,
-      trimEnd: Math.max(MIN_CLIP_DURATION, duration),
+      trimEnd: safeDur,
       videoSrc: src,
       clips: [
         {
-          id,
+          id: videoId,
           type: "video",
           src,
           start: 0,
-          end: duration,
+          end: safeDur,
           sourceStart: 0,
-          sourceEnd: duration,
+          sourceEnd: safeDur,
           trackIndex: 0,
           name: "主视频",
+          volume: 1,
         },
       ],
       markers: [],
       beatMarkers: [],
       transitions: [],
-      selectedClipId: id,
+      selectedClipId: videoId,
       currentTime: 0,
       canUndo: false,
       canRedo: false,
@@ -516,9 +580,12 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     const sourceStart = clip.sourceStart ?? 0;
     const sourceEnd =
       clip.sourceEnd ?? Math.max(sourceStart + MIN_CLIP_DURATION, end - start);
+    const clipType = clip.type ?? "video";
+    const isVideoClip = clipType === "video";
+    const skipAudioExtract = (clip as { skipAudioExtract?: boolean }).skipAudioExtract ?? false;
     const next: TimelineClip = {
       id,
-      type: clip.type ?? "video",
+      type: clipType,
       src: clip.src,
       start,
       end,
@@ -527,10 +594,31 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       trackIndex: clip.trackIndex ?? 0,
       name: clip.name,
       speed: clip.speed ?? 1,
+      volume: isVideoClip ? 0 : (clip.volume ?? 1), // video: mute embedded, audio: use provided or full
+      muted: clip.muted,
       keyframes: clip.keyframes,
     };
+    // Auto-extract audio onto track 1 when a video clip is added (skip for AI-generated clips)
+    const audioExtract: TimelineClip | null = isVideoClip && !skipAudioExtract
+      ? {
+          id: newClipId(),
+          type: "audio",
+          src: next.src,
+          start: next.start,
+          end: next.end,
+          sourceStart: next.sourceStart,
+          sourceEnd: next.sourceEnd,
+          trackIndex: 1,
+          name: `${next.name ?? "视频"} 音频`,
+          volume: 1,
+          speed: 1,
+        }
+      : null;
     set((s) => {
-      const clips = [...s.clips, next].sort((a, b) => a.start - b.start);
+      const toAdd: TimelineClip[] = audioExtract ? [next, audioExtract] : [next];
+      const clips = [...s.clips, ...toAdd].sort((a, b) =>
+        a.trackIndex === b.trackIndex ? a.start - b.start : a.trackIndex - b.trackIndex
+      );
       const duration = getTimelineDuration(s.sourceDuration, clips);
       return {
         clips,
@@ -952,6 +1040,23 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
         duration: getTimelineDuration(s.sourceDuration, nextClips),
       };
     });
+    return true;
+  },
+
+  setClipVolume: (clipId, volume) => {
+    const { clips } = get();
+    if (!clips.find((c) => c.id === clipId)) return false;
+    const safe = Math.max(0, Math.min(2, volume));
+    pushHistory(get, set);
+    set((s) => ({ clips: s.clips.map((c) => (c.id === clipId ? { ...c, volume: safe } : c)) }));
+    return true;
+  },
+
+  setClipMuted: (clipId, muted) => {
+    const { clips } = get();
+    if (!clips.find((c) => c.id === clipId)) return false;
+    pushHistory(get, set);
+    set((s) => ({ clips: s.clips.map((c) => (c.id === clipId ? { ...c, muted } : c)) }));
     return true;
   },
 

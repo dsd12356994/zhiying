@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
+import { useShallow } from "zustand/react/shallow";
 import { Toolbar } from "./components/editor/Toolbar";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { MediaPanel } from "./components/editor/MediaPanel";
@@ -7,7 +8,6 @@ import { Preview } from "./components/editor/Preview";
 import { Timeline } from "./components/editor/Timeline";
 import { ChatBox } from "./components/editor/ChatBox";
 import { ExportDialog } from "./components/editor/ExportDialog";
-import { FlowTab } from "./components/workspace/FlowTab";
 import { InspectorPanel } from "./components/editor/InspectorPanel";
 import { SettingsDialog } from "./components/settings/SettingsDialog";
 import { OnboardingTour } from "./components/onboarding/OnboardingTour";
@@ -19,7 +19,10 @@ import { useProjectStore } from "./stores/project-store";
 import { useSettingsStore } from "./stores/settings-store";
 
 function EditorWorkspace() {
-  const { showMediaPanel, showInspector, toggleFlowTab, showExportDialog, setExportDialog } = useEditorStore();
+  const {
+    showMediaPanel, showInspector,
+    showExportDialog, setExportDialog,
+  } = useEditorStore();
   const [showSettings, setShowSettings] = useState(false);
   useKeyboardShortcuts();
 
@@ -73,31 +76,12 @@ function EditorWorkspace() {
               时间轴
             </span>
           </div>
-          <button
-            onClick={toggleFlowTab}
-            className="flow-tab-btn flex items-center gap-1 rounded-md px-2 py-1 text-[10px] transition-colors"
-            style={{
-              border: "1px solid var(--border)",
-              backgroundColor: "var(--bg-primary)",
-              color: "var(--text-secondary)",
-              borderRadius: "var(--radius-sm)",
-            }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12">
-              <path d="M4 6h16M4 12h16M4 18h16" />
-              <circle cx="8" cy="6" r="1.5" fill="currentColor" />
-              <circle cx="14" cy="12" r="1.5" fill="currentColor" />
-              <circle cx="10" cy="18" r="1.5" fill="currentColor" />
-            </svg>
-            AI 工作流
-          </button>
         </div>
         <div className="h-[calc(100%-28px)]">
           <Timeline />
         </div>
       </div>
       <ChatBox />
-      <FlowTab />
       <ExportDialog open={showExportDialog} onClose={() => setExportDialog(false)} />
       <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
       <OnboardingTour />
@@ -128,19 +112,21 @@ function EditorRoute() {
   const saveTimerRef = useRef<number | null>(null);
   const setProject = useProjectStore((s) => s.setProject);
   const project = useProjectStore((s) => s.project);
-  const editorSnapshot = useEditorStore((s) => ({
-    videoSrc: s.videoSrc,
-    clips: s.clips,
-    transitions: s.transitions,
-    markers: s.markers,
-    beatMarkers: s.beatMarkers,
-    duration: s.duration,
-    sourceDuration: s.sourceDuration,
-    trimStart: s.trimStart,
-    trimEnd: s.trimEnd,
-    currentTime: s.currentTime,
-    selectedClipId: s.selectedClipId,
-  }));
+  const editorSnapshot = useEditorStore(
+    useShallow((s) => ({
+      videoSrc: s.videoSrc,
+      clips: s.clips,
+      transitions: s.transitions,
+      markers: s.markers,
+      beatMarkers: s.beatMarkers,
+      duration: s.duration,
+      sourceDuration: s.sourceDuration,
+      trimStart: s.trimStart,
+      trimEnd: s.trimEnd,
+      currentTime: s.currentTime,
+      selectedClipId: s.selectedClipId,
+    }))
+  );
 
   useEffect(() => {
     let active = true;

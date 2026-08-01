@@ -4,7 +4,7 @@ import {
   retrieveRelevantContext,
 } from "../rag/toolKnowledgeBase";
 
-export type AgentProvider = "mock" | "openai" | "deepseek" | "claude" | "local";
+export type AgentProvider = "mock" | "openai" | "deepseek" | "claude" | "zhipu";
 
 export interface AgentToolCall {
   name: string;
@@ -33,8 +33,31 @@ export interface ToolExecutionObservation {
 
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 const DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions";
-const ZHIYING_AGENT_SYSTEM_PROMPT =
-  "你是专业的视频剪辑 AI 助手“智映”。你的核心能力是理解用户自然语言并调用工具完成剪辑。规则：1) 用户说“删除/剪掉 X 秒到 Y 秒”时，直接调用 removeRange({start:X,end:Y,ripple:true})，不要拆分成 split+delete。2) 若用户只说“删除这个区间”但无具体时间，先询问时间范围，或先调用 getTimelineInfo 帮助定位。3) 删除最后几秒优先 trimLast；裁剪到某时刻优先 trimTo。4) 用户要求黑白/复古/电影感等画面风格时，优先调用 applyFilter。5) 用户要求在片段间添加转场时，优先调用 addTransition。6) 用户要求添加字幕/文字时，调用 addText。7) 用户要求卡点时，先 detectBeats，再 snapToBeat。8) 用户要求变速（快放/慢放/几倍速）时调用 changeSpeed。9) 用户要求关键帧动画时调用 addKeyframe。10) 查询类请求优先用 getClipDetails/listTransitions/getTimelineInfo。11) 工具执行后用简洁中文反馈结果。12) 参数必须严格符合工具 schema。示例：用户“给第一段加黑白滤镜” -> applyFilter({clipIndex:1,filterName:'noir',intensity:1})；用户“第一段和第二段加淡入淡出转场” -> addTransition({fromClipIndex:1,toClipIndex:2,type:'fade',duration:1})；用户“5到10秒加字幕Hello” -> addText({content:'Hello',start:5,end:10})；用户“把第二段卡到节拍” -> detectBeats({}) + snapToBeat({})；用户“第三段2倍速” -> changeSpeed({clipIndex:3,speed:2})；用户“2秒时缩放到1.5” -> addKeyframe({property:'scale',time:2,value:1.5})。";
+const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
+const ANTHROPIC_VERSION = "2023-06-01";
+  `你是专业的 AI 视频创作助手"智映"。你帮助保险/金融从业者制作专业知识分享视频，用于线上获客。
+
+核心工作流（当用户说"帮我做一个XX视频"时，按 Phase 顺序执行）：
+Phase 1: 搜索 → 调用 searchWeb({query}) 获取权威信息
+Phase 2: 脚本 → 调用 generateScript({topic, research, tone}) 生成口播脚本
+Phase 3: 分镜 → 调用 generateStoryboard({script, topic}) 将脚本拆分为视频镜头
+Phase 4: 文生视频 → 逐一调用 generateVideoClip({prompt, duration}) 为每个镜头生成AI画面
+Phase 5: 语音 → 调用 synthesizeSpeech({text, voice}) 生成配音（Edge TTS 免费）
+Phase 6: 合成 → 调用 composeVideo({avatarVideoUrl, subtitles, branding}) 拼接场景+字幕+品牌
+Phase 7: 导出 → 调用 exportVideo({filename}) 输出最终视频
+
+编辑类工具：splitClip/trimTo/trimLast/trimClip/deleteClip/removeRange/moveClip 用于微调。
+效果类工具：applyFilter/addTransition/addText/changeSpeed/addKeyframe 用于增强画面。
+品牌工具：setBranding({watermarkText, introText, outroText, primaryColor}) 设置水印和片头片尾。
+
+规则：
+1) 脚本生成前必须先 searchWeb 确保内容准确可靠。
+2) generateStoryboard 的 script 参数使用 generateScript 返回的 data.script。
+3) generateVideoClip 的 prompt 参数使用 generateStoryboard 返回的 scenes[].prompt。
+4) 文生视频需要配置视频生成 API Key（设置->AI 配置）。
+5) 所有工具参数必须严格符合 JSON Schema。
+6) 工具执行后用简洁中文反馈结果。
+7) 默认输出竖版视频（9:16），适配抖音/视频号/小红书。`;
 
 interface ProviderConfig {
   apiUrl: string;
@@ -42,24 +65,72 @@ interface ProviderConfig {
   model: string;
 }
 
-function getProviderConfig(provider: "openai" | "deepseek"): ProviderConfig | null {
+const ZHIIPU_TEXT_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+
+const DEFAULT_URLS: Record<string, string> = {
+  openai: OPENAI_API_URL,
+  deepseek: DEEPSEEK_API_URL,
+  claude: CLAUDE_API_URL,
+  zhipu: ZHIIPU_TEXT_URL,
+};
+
+const DEFAULT_MODELS: Record<string, string> = {
+  openai: "gpt-4.1-mini",
+  deepseek: "deepseek-chat",
+  claude: "claude-sonnet-4-6",
+  zhipu: "glm-4-flash",
+};
+
+function readRuntimeConfig(provider: "openai" | "deepseek" | "claude"): ProviderConfig | null {
+  try {
+    const raw = typeof window !== "undefined" ? window.localStorage.getItem("zhiying.aiConfig.v1") : null;
+    if (!raw) return null;
+    const cfg = JSON.parse(raw) as Record<string, Record<string, string> | undefined>;
+    const p = cfg[provider];
+    if (!p?.apiKey) return null;
+    return {
+      apiKey: p.apiKey,
+      model: p.model || DEFAULT_MODELS[provider],
+      apiUrl: p.apiUrl || DEFAULT_URLS[provider],
+    };
+  } catch {
+    return null;
+  }
+}
+
+function getProviderConfig(provider: "openai" | "deepseek" | "claude" | "zhipu"): ProviderConfig | null {
+  // Runtime config (set via Settings UI) takes priority over env vars
+  const runtime = readRuntimeConfig(provider);
+  if (runtime) return runtime;
+
   if (provider === "openai") {
     const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
     if (!apiKey) return null;
     return {
       apiUrl: (import.meta.env.VITE_OPENAI_API_URL as string | undefined) || OPENAI_API_URL,
       apiKey,
-      model: (import.meta.env.VITE_OPENAI_MODEL as string | undefined) || "gpt-4.1-mini",
+      model: (import.meta.env.VITE_OPENAI_MODEL as string | undefined) || DEFAULT_MODELS.openai,
     };
   }
-  const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY as string | undefined;
-  if (!apiKey) return null;
-  return {
-    apiUrl:
-      (import.meta.env.VITE_DEEPSEEK_API_URL as string | undefined) || DEEPSEEK_API_URL,
-    apiKey,
-    model: (import.meta.env.VITE_DEEPSEEK_MODEL as string | undefined) || "deepseek-chat",
-  };
+  if (provider === "deepseek") {
+    const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY as string | undefined;
+    if (!apiKey) return null;
+    return {
+      apiUrl: (import.meta.env.VITE_DEEPSEEK_API_URL as string | undefined) || DEEPSEEK_API_URL,
+      apiKey,
+      model: (import.meta.env.VITE_DEEPSEEK_MODEL as string | undefined) || DEFAULT_MODELS.deepseek,
+    };
+  }
+  if (provider === "zhipu") {
+    const apiKey = import.meta.env.VITE_ZHIIPU_API_KEY as string | undefined;
+    if (!apiKey) return null;
+    return {
+      apiUrl: (import.meta.env.VITE_ZHIIPU_API_URL as string | undefined) || ZHIIPU_TEXT_URL,
+      apiKey,
+      model: (import.meta.env.VITE_ZHIIPU_MODEL as string | undefined) || DEFAULT_MODELS.zhipu,
+    };
+  }
+  return null;
 }
 
 function extractNumber(input: string): number | null {
@@ -71,228 +142,124 @@ function extractNumber(input: string): number | null {
 
 function parseMockToolCalls(userInput: string): AgentToolCall[] {
   const text = userInput.trim().toLowerCase();
-  const secs = extractNumber(text);
-  const removeRangeMatch = text.match(
-    /(?:删除|剪掉|剪去)\s*(\d+(?:\.\d+)?)\s*秒?\s*(?:到|至|-|~)\s*(\d+(?:\.\d+)?)\s*秒?/
-  );
-  if (removeRangeMatch) {
-    const start = Number.parseFloat(removeRangeMatch[1]);
-    const end = Number.parseFloat(removeRangeMatch[2]);
-    if (Number.isFinite(start) && Number.isFinite(end)) {
-      return [{ name: "removeRange", params: { start, end, ripple: true } }];
-    }
+
+  // Knowledge video workflow detection
+  const isVideoRequest =
+    /(做|生成|创建|拍|制作|帮我弄|来一个).*(视频|vide|科普|分享|知识|保险|移民|理财|金融)/i.test(text) ||
+    /(视频|vide|科普|知识分享)/i.test(text);
+
+  if (isVideoRequest) {
+    const calls: AgentToolCall[] = [];
+    // Extract topic
+    const topicMatch = text.match(/(?:关于|介绍|讲|做|科普).{0,5}([^\s，,。.]{4,30})/);
+    const topic = topicMatch?.[1] || text.slice(0, 40);
+    calls.push({ name: "searchWeb", params: { query: topic } });
+    const tone =
+      text.includes("专业") || text.includes("严谨") ? "professional"
+      : text.includes("简单") || text.includes("直白") ? "simple"
+      : text.includes("权威") ? "authoritative"
+      : "friendly";
+    calls.push({ name: "generateScript", params: { topic, tone } });
+    return calls;
   }
 
-  if (text.includes("分割") || text.includes("split")) {
-    if (secs === null) return [{ name: "splitAtPlayhead", params: {} }];
-    return [{ name: "splitClip", params: { time: secs } }];
+  // Branding
+  if (/(水印|品牌|片头|片尾|logo|brand)/i.test(text)) {
+    const params: Record<string, unknown> = {};
+    const wm = text.match(/水印[：:]\s*["""]?([^"""]+)["""]?/i) || text.match(/水印文字?[是为设为]?\s*["""]?([^"""]+)["""]?/i);
+    if (wm) params.watermarkText = wm[1].trim();
+    const intro = text.match(/片头[：:]\s*(.+)/i);
+    if (intro) params.introText = intro[1].trim();
+    const outro = text.match(/片尾[：:]\s*(.+)/i);
+    if (outro) params.outroText = outro[1].trim();
+    if (Object.keys(params).length > 0) return [{ name: "setBranding", params }];
   }
 
-  if (text.includes("裁剪") || text.includes("trim")) {
-    if (text.includes("到") && secs !== null) {
-      return [{ name: "trimTo", params: { seconds: secs } }];
-    }
-    if (secs !== null) {
-      if (text.includes("起点") || text.includes("开始")) {
-        return [{ name: "trimClip", params: { edge: "start", time: secs } }];
-      }
-      return [{ name: "trimClip", params: { edge: "end", time: secs } }];
-    }
-    return [];
-  }
+  // Export
+  if (/(导出|输出|下载|export)/i.test(text)) return [{ name: "exportVideo", params: {} }];
 
-  if (text.includes("删除") || text.includes("delete")) {
-    if ((text.includes("最后") || text.includes("last")) && secs !== null) {
-      return [{ name: "trimLast", params: { seconds: secs } }];
-    }
-    const ripple = text.includes("闭合") || text.includes("ripple");
-    const indexMatch = text.match(/第\s*(\d+)\s*段/);
-    if (indexMatch) {
-      return [{ name: "deleteClip", params: { clipIndex: Number(indexMatch[1]), ripple } }];
-    }
-    return [{ name: "deleteClip", params: { ripple } }];
-  }
+  // Script preview
+  if (/(预览|看看|检查|脚本|script)/i.test(text)) return [{ name: "previewScript", params: { topic: "topic" } }];
 
-  if (text.includes("移动") || text.includes("move")) {
-    if (secs !== null) return [{ name: "moveClip", params: { start: secs } }];
-    return [];
-  }
-
-  if (text.includes("滤镜") || text.includes("黑白") || text.includes("复古")) {
-    if (text.includes("黑白")) {
-      return [{ name: "applyFilter", params: { filterName: "noir", intensity: 1 } }];
-    }
-    if (text.includes("复古")) {
-      return [{ name: "applyFilter", params: { filterName: "vintage", intensity: 1 } }];
-    }
-    if (text.includes("电影")) {
-      return [{ name: "applyFilter", params: { filterName: "cinematic", intensity: 1 } }];
-    }
-    return [{ name: "applyFilter", params: { filterName: "vintage", intensity: 0.8 } }];
-  }
-
-  if ((text.includes("转场") && text.includes("列表")) || text.includes("有哪些转场")) {
-    return [{ name: "listTransitions", params: {} }];
-  }
-  if ((text.includes("片段") && text.includes("详情")) || text.includes("当前片段信息")) {
-    return [{ name: "getClipDetails", params: {} }];
-  }
-
-  if (text.includes("转场") || text.includes("过渡")) {
-    if (text.includes("淡入") || text.includes("淡出")) {
-      return [{ name: "addTransition", params: { type: "fade", duration: 1 } }];
-    }
-    if (text.includes("滑动")) {
-      return [{ name: "addTransition", params: { type: "slide", duration: 1 } }];
-    }
-    if (text.includes("擦除")) {
-      return [{ name: "addTransition", params: { type: "wipe", duration: 1 } }];
-    }
-    return [{ name: "addTransition", params: { type: "crossDissolve", duration: 1 } }];
-  }
-
-  if (text.includes("字幕") || text.includes("文字")) {
-    const range = text.match(/(\d+(?:\.\d+)?)\s*(?:秒)?\s*(?:到|至|-|~)\s*(\d+(?:\.\d+)?)/);
-    if (range) {
-      const start = Number.parseFloat(range[1]);
-      const end = Number.parseFloat(range[2]);
-      const content = userInput
-        .replace(/.*(?:字幕|文字)\s*/i, "")
-        .replace(/(\d+(?:\.\d+)?)\s*(?:秒)?\s*(?:到|至|-|~)\s*(\d+(?:\.\d+)?).*/i, "")
-        .trim();
-      return [
-        {
-          name: "addText",
-          params: { content: content || "新字幕", start, end },
-        },
-      ];
-    }
-    if (secs !== null) {
-      const content = userInput.replace(/.*(?:字幕|文字)\s*/i, "").trim() || "新字幕";
-      return [{ name: "addText", params: { content, start: secs, end: secs + 2 } }];
-    }
-  }
-
-  if (text.includes("节拍") || text.includes("卡点")) {
-    if (text.includes("分析") || text.includes("检测")) {
-      return [{ name: "detectBeats", params: {} }];
-    }
+  // Digital human / voice
+  if (/(数字人|头像|语音|配音|tts|avatar|speech)/i.test(text)) {
     return [
-      { name: "detectBeats", params: {} },
-      { name: "snapToBeat", params: {} },
+      { name: "synthesizeSpeech", params: { text: text, voice: "xiaoxiao" } },
+      { name: "generateAvatar", params: { photoUrl: "", audioUrl: "" } },
     ];
   }
 
-  if (text.includes("倍速") || text.includes("快放") || text.includes("慢放") || text.includes("加速")) {
-    const speedMatch = text.match(/(\d+(?:\.\d+)?)\s*倍/);
-    const speed = speedMatch ? Number.parseFloat(speedMatch[1]) : null;
-    if (speed !== null && Number.isFinite(speed)) {
-      return [{ name: "changeSpeed", params: { speed } }];
-    }
-    if (text.includes("慢放")) return [{ name: "changeSpeed", params: { speed: 0.5 } }];
-    if (text.includes("快放") || text.includes("加速")) {
-      return [{ name: "changeSpeed", params: { speed: 2 } }];
-    }
+  // Basic editing tools (kept for compatibility)
+  if (/(分割|split)/i.test(text)) return [{ name: "splitAtPlayhead", params: {} }];
+  if (/(裁剪|trim)/i.test(text)) return [{ name: "trimTo", params: { seconds: extractNumber(text) ?? 30 } }];
+  if (/(滤镜|黑白|复古|电影感|温暖|vintage|noir|warm)/i.test(text)) {
+    return [{ name: "applyFilter", params: { filterName: text.includes("黑白") ? "noir" : text.includes("温暖") ? "warm" : "vintage", intensity: 0.8 } }];
   }
-
-  if (text.includes("关键帧") || text.includes("放大") || text.includes("透明度")) {
-    const t = secs ?? 0;
-    if (text.includes("放大")) {
-      const v = text.match(/(\d+(?:\.\d+)?)\s*倍/)?.[1];
-      return [
-        {
-          name: "addKeyframe",
-          params: { property: "scale", time: t, value: v ? Number.parseFloat(v) : 1.5 },
-        },
-      ];
-    }
-    if (text.includes("透明")) {
-      const v = text.match(/(\d+(?:\.\d+)?)/)?.[1];
-      return [
-        {
-          name: "addKeyframe",
-          params: { property: "opacity", time: t, value: v ? Number.parseFloat(v) : 0 },
-        },
-      ];
-    }
-  }
-
-  if (text.includes("导出") || text.includes("export")) {
-    return [{ name: "exportVideo", params: {} }];
-  }
-
-  if (text.includes("撤销") || text === "undo") {
-    return [{ name: "undo", params: {} }];
-  }
-
-  if (text.includes("重做") || text === "redo") {
-    return [{ name: "redo", params: {} }];
-  }
+  if (/(字幕|文字|add.?text)/i.test(text)) return [{ name: "addText", params: { content: text, start: 0, end: 5 } }];
+  if (/(转场|过渡|transition)/i.test(text)) return [{ name: "addTransition", params: { type: "fade", duration: 1 } }];
+  if (/(撤销|undo)/i.test(text)) return [{ name: "undo", params: {} }];
+  if (/(重做|redo)/i.test(text)) return [{ name: "redo", params: {} }];
 
   return [];
 }
 
-async function askProvider(
-  userInput: string,
-  provider: "openai" | "deepseek"
-): Promise<AskLlmResult> {
-  const config = getProviderConfig(provider);
-  if (!config) {
-    const mockCalls = parseMockToolCalls(userInput);
-    const context = await retrieveRelevantContext(userInput, 5, 3);
-    return {
-      toolCalls: mockCalls,
-      message: mockCalls.length > 0 ? "已进入 mock 模式并生成工具调用。" : "未检测到可执行工具（mock 模式）。",
-      providerUsed: "fallback-mock",
-      retrievedTools: context.tools.map((t) => t.name),
-      retrievedFailureHints: context.failureHints.map((h) => h.toolName),
-    };
-  }
+function toAnthropicTools(llmTools: ReturnType<typeof getToolsForLLM>) {
+  return llmTools.map((t) => ({
+    name: t.function.name,
+    description: t.function.description,
+    input_schema: t.function.parameters,
+  }));
+}
 
-  const context = await retrieveRelevantContext(userInput, 5, 3);
+// Default small tool set when RAG finds no matches — avoids sending all 27+ tools
+const FALLBACK_TOOL_NAMES = [
+  "searchWeb", "generateScript", "synthesizeSpeech", "generateAvatar", "composeVideo",
+  "getTimelineInfo", "addText", "applyFilter", "exportVideo",
+];
+
+function pickTools(
+  allTools: ReturnType<typeof getToolsForLLM>,
+  relevantNames: Set<string>
+): ReturnType<typeof getToolsForLLM> {
+  if (relevantNames.size > 0) return allTools.filter((t) => relevantNames.has(t.function.name));
+  return allTools.filter((t) => FALLBACK_TOOL_NAMES.includes(t.function.name));
+}
+
+async function askOpenAICompat(
+  userInput: string,
+  provider: "openai" | "deepseek",
+  config: ProviderConfig,
+  context: Awaited<ReturnType<typeof retrieveRelevantContext>>
+): Promise<AskLlmResult> {
   const relevantTools = context.tools;
-  const enrichedPrompt = enrichPromptWithTools(
-    userInput,
-    relevantTools,
-    context.failureHints
-  );
+  const enrichedPrompt = enrichPromptWithTools(userInput, relevantTools, context.failureHints);
   const allTools = getToolsForLLM();
   const relevantNames = new Set(relevantTools.map((t) => t.name));
-  const scopedTools =
-    relevantNames.size > 0
-      ? allTools.filter((tool) => relevantNames.has(tool.function.name))
-      : allTools;
+  const scopedTools = pickTools(allTools, relevantNames);
 
   const response = await fetch(config.apiUrl, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.apiKey}`,
-    },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
     body: JSON.stringify({
       model: config.model,
       temperature: 0.2,
       messages: [
-        {
-          role: "system",
-          content: ZHIYING_AGENT_SYSTEM_PROMPT,
-        },
+        { role: "system", content: ZHIYING_AGENT_SYSTEM_PROMPT },
         { role: "user", content: enrichedPrompt },
       ],
-      tools: scopedTools.length > 0 ? scopedTools : allTools,
+      tools: scopedTools,
       tool_choice: "auto",
     }),
   });
 
   if (!response.ok) {
     const mockCalls = parseMockToolCalls(userInput);
-    const providerLabel = provider === "deepseek" ? "DeepSeek" : "OpenAI";
+    const label = provider === "deepseek" ? "DeepSeek" : "OpenAI";
     return {
       toolCalls: mockCalls,
-      message:
-        mockCalls.length > 0
-          ? `${providerLabel} 请求失败(${response.status})，已回退 mock 执行。`
-          : `${providerLabel} 请求失败(${response.status})，且 mock 未匹配到命令。`,
+      message: mockCalls.length > 0
+        ? `${label} 请求失败(${response.status})，已回退 mock 执行。`
+        : `${label} 请求失败(${response.status})，且 mock 未匹配到命令。`,
       providerUsed: "fallback-mock",
       retrievedTools: relevantTools.map((t) => t.name),
       retrievedFailureHints: context.failureHints.map((h) => h.toolName),
@@ -303,13 +270,10 @@ async function askProvider(
     choices?: Array<{
       message?: {
         content?: string | null;
-        tool_calls?: Array<{
-          function?: { name?: string; arguments?: string };
-        }>;
+        tool_calls?: Array<{ function?: { name?: string; arguments?: string } }>;
       };
     }>;
   };
-
   const message = data.choices?.[0]?.message;
   const toolCalls =
     message?.tool_calls
@@ -340,6 +304,100 @@ async function askProvider(
   };
 }
 
+async function askClaude(
+  userInput: string,
+  config: ProviderConfig,
+  context: Awaited<ReturnType<typeof retrieveRelevantContext>>
+): Promise<AskLlmResult> {
+  const relevantTools = context.tools;
+  const enrichedPrompt = enrichPromptWithTools(userInput, relevantTools, context.failureHints);
+  const allTools = getToolsForLLM();
+  const relevantNames = new Set(relevantTools.map((t) => t.name));
+  const scopedTools = pickTools(allTools, relevantNames);
+
+  const response = await fetch(config.apiUrl || CLAUDE_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": config.apiKey,
+      "anthropic-version": ANTHROPIC_VERSION,
+    },
+    body: JSON.stringify({
+      model: config.model,
+      max_tokens: 1024,
+      system: ZHIYING_AGENT_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: enrichedPrompt }],
+      tools: toAnthropicTools(scopedTools),
+      tool_choice: { type: "auto" },
+    }),
+  });
+
+  if (!response.ok) {
+    const mockCalls = parseMockToolCalls(userInput);
+    return {
+      toolCalls: mockCalls,
+      message: mockCalls.length > 0
+        ? `Claude 请求失败(${response.status})，已回退 mock 执行。`
+        : `Claude 请求失败(${response.status})，且 mock 未匹配到命令。`,
+      providerUsed: "fallback-mock",
+      retrievedTools: relevantTools.map((t) => t.name),
+      retrievedFailureHints: context.failureHints.map((h) => h.toolName),
+    };
+  }
+
+  const data = (await response.json()) as {
+    content?: Array<
+      | { type: "text"; text: string }
+      | { type: "tool_use"; id: string; name: string; input: Record<string, unknown> }
+    >;
+  };
+
+  const toolCalls: AgentToolCall[] = (data.content ?? [])
+    .filter((block): block is { type: "tool_use"; id: string; name: string; input: Record<string, unknown> } =>
+      block.type === "tool_use"
+    )
+    .map((block) => ({ name: block.name, params: block.input ?? {} }));
+
+  const textBlock = (data.content ?? []).find((b) => b.type === "text") as
+    | { type: "text"; text: string }
+    | undefined;
+
+  return {
+    toolCalls,
+    message:
+      textBlock?.text?.trim() ||
+      (toolCalls.length
+        ? `已生成工具调用（RAG命中 ${relevantTools.length} 个工具）。`
+        : "我没有找到可以执行的工具动作。"),
+    providerUsed: "claude",
+    retrievedTools: relevantTools.map((t) => t.name),
+    retrievedFailureHints: context.failureHints.map((h) => h.toolName),
+  };
+}
+
+async function askProvider(
+  userInput: string,
+  provider: "openai" | "deepseek" | "claude" | "zhipu"
+): Promise<AskLlmResult> {
+  const config = getProviderConfig(provider);
+  const context = await retrieveRelevantContext(userInput, 5, 3);
+
+  if (!config) {
+    const mockCalls = parseMockToolCalls(userInput);
+    return {
+      toolCalls: mockCalls,
+      message: mockCalls.length > 0 ? "已进入 mock 模式并生成工具调用。" : "未检测到可执行工具（mock 模式）。",
+      providerUsed: "fallback-mock",
+      retrievedTools: context.tools.map((t) => t.name),
+      retrievedFailureHints: context.failureHints.map((h) => h.toolName),
+    };
+  }
+
+  if (provider === "claude") return askClaude(userInput, config, context);
+  // zhipu uses OpenAI-compatible API, reuse the same path
+  return askOpenAICompat(userInput, provider as "openai" | "deepseek" | "zhipu", config, context);
+}
+
 export async function summarizeAfterToolExecution(
   userInput: string,
   observations: ToolExecutionObservation[],
@@ -352,7 +410,7 @@ export async function summarizeAfterToolExecution(
   const failed = observations.length - success;
   const localSummary = `已执行 ${observations.length} 个工具：成功 ${success}，失败 ${failed}。`;
 
-  if (provider !== "openai" && provider !== "deepseek") {
+  if (provider !== "openai" && provider !== "deepseek" && provider !== "claude") {
     return `${localSummary}\n${observations
       .map((o) => `${o.ok ? "✅" : "❌"} ${o.name}: ${o.message}`)
       .join("\n")}`;
@@ -361,8 +419,37 @@ export async function summarizeAfterToolExecution(
   const config = getProviderConfig(provider);
   if (!config) return localSummary;
 
+  const summarizeMessages = [
+    {
+      role: "system" as const,
+      content: "你是视频剪辑助手。根据用户请求与工具执行结果，给出简短自然语言总结（2-4句），强调是否达成目标及下一步建议。",
+    },
+    { role: "user" as const, content: JSON.stringify({ userInput, observations }) },
+  ];
+
   try {
-    const response = await fetch(config.apiUrl, {
+    let response: Response;
+    if (provider === "claude") {
+      response = await fetch(config.apiUrl || CLAUDE_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": config.apiKey,
+          "anthropic-version": ANTHROPIC_VERSION,
+        },
+        body: JSON.stringify({
+          model: config.model,
+          max_tokens: 256,
+          system: summarizeMessages[0].content,
+          messages: [summarizeMessages[1]],
+        }),
+      });
+      if (!response.ok) return localSummary;
+      const data = (await response.json()) as { content?: Array<{ type: string; text?: string }> };
+      return data.content?.find((b) => b.type === "text")?.text?.trim() || localSummary;
+    }
+
+    response = await fetch(config.apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -401,7 +488,7 @@ export async function askLLM(
   const provider = options.provider ?? "mock";
   const context = await retrieveRelevantContext(userInput, 5, 3);
 
-  if (provider === "openai" || provider === "deepseek") {
+  if (provider === "openai" || provider === "deepseek" || provider === "claude" || provider === "zhipu") {
     return askProvider(userInput, provider);
   }
 

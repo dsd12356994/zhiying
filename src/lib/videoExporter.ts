@@ -16,6 +16,8 @@ export interface ExportClipInput {
   sourceStart?: number;
   sourceEnd?: number;
   speed?: number;
+  volume?: number; // 0–2, default 1.0
+  muted?: boolean;
   filter?: { cssValue?: string; name?: string; intensity?: number };
   content?: string;
   fontSize?: number;
@@ -55,6 +57,7 @@ interface AudioMixPlan {
   sourceStart: number;
   sourceEnd: number;
   sourceKey: string;
+  volume: number; // linear gain applied during mix
 }
 
 const AUDIO_DECODE_TIMEOUT_MS = 8000;
@@ -333,12 +336,13 @@ function buildMixedAudioFrame(
     );
     const outSpan = Math.max(1e-6, plan.outputEnd - plan.outputStart);
 
+    const gain = plan.volume;
     for (let s = startSample; s < endSample; s++) {
       const t = frameStartSec + s / sampleRate;
       const ratio = (t - plan.outputStart) / outSpan;
       const sourceTime = plan.sourceStart + ratio * (plan.sourceEnd - plan.sourceStart);
-      out[s * 2] += sampleAudio(buffer, 0, sourceTime);
-      out[s * 2 + 1] += sampleAudio(buffer, 1, sourceTime);
+      out[s * 2] += sampleAudio(buffer, 0, sourceTime) * gain;
+      out[s * 2 + 1] += sampleAudio(buffer, 1, sourceTime) * gain;
     }
   }
 
@@ -530,6 +534,7 @@ async function exportWithWebCodecs(
     for (const clip of videoClips) {
       const duration = Math.max(0, clip.end - clip.start);
       if (duration <= 0) continue;
+      if (clip.muted) { outputCursor += duration; continue; }
       const sourceKey = await ensureSourceBuffer(clip);
       videoAudioPlans.push({
         outputStart: outputCursor,
@@ -537,12 +542,14 @@ async function exportWithWebCodecs(
         sourceStart: clip.sourceStart ?? clip.start,
         sourceEnd: clip.sourceEnd ?? clip.end,
         sourceKey,
+        volume: clip.volume ?? 1,
       });
       outputCursor += duration;
     }
     const extraAudioPlans: AudioMixPlan[] = [];
     for (const clip of clips) {
       if (clip.type !== "audio") continue;
+      if (clip.muted) continue;
       const sourceKey = await ensureSourceBuffer(clip);
       extraAudioPlans.push({
         outputStart: Math.max(0, clip.start),
@@ -550,6 +557,7 @@ async function exportWithWebCodecs(
         sourceStart: clip.sourceStart ?? 0,
         sourceEnd: clip.sourceEnd ?? Math.max(0, clip.end - clip.start),
         sourceKey,
+        volume: clip.volume ?? 1,
       });
     }
     const mixPlans = [...videoAudioPlans, ...extraAudioPlans].filter((p) => p.outputEnd - p.outputStart > 1e-6);

@@ -44,6 +44,15 @@ function suggestionKey(suggestion: RepairSuggestion): string {
 }
 
 function getDefaultProvider(): AgentProvider {
+  try {
+    const raw = typeof window !== "undefined" ? window.localStorage.getItem("zhiying.aiConfig.v1") : null;
+    if (raw) {
+      const cfg = JSON.parse(raw) as { provider?: string };
+      if (cfg.provider && ["mock", "openai", "deepseek", "claude", "zhipu"].includes(cfg.provider)) {
+        return cfg.provider as AgentProvider;
+      }
+    }
+  } catch { /* ignore */ }
   if (import.meta.env.VITE_DEEPSEEK_API_KEY) return "deepseek";
   return "mock";
 }
@@ -68,7 +77,7 @@ export function ChatBox() {
   const text =
     language === "en"
       ? {
-          title: "AI Assistant",
+          title: "AI Video Creator",
           toolHits: "Tool hits",
           failureHints: "Failure hints",
           summary: "Summary",
@@ -87,7 +96,7 @@ export function ChatBox() {
           smokeRunning: "Running...",
           smokeTitle: "Validate common prompts parser mapping",
           retryFailed: "Retry failed step",
-          inputAi: "Edit with AI...",
+          inputAi: "Describe your knowledge video...",
           inputCmd: "Type command...",
           aiOn: "AI Agent enabled",
           aiOff: "AI Agent disabled",
@@ -119,7 +128,7 @@ export function ChatBox() {
           smokeRunning: "冒烟中…",
           smokeTitle: "快速验证常见命令是否能解析到目标工具",
           retryFailed: "重试失败步骤",
-          inputAi: "用 AI 指挥剪辑…",
+          inputAi: "描述你想做的知识视频…",
           inputCmd: "输入指令…",
           aiOn: "AI Agent 已启用",
           aiOff: "AI Agent 已关闭",
@@ -414,7 +423,10 @@ export function ChatBox() {
                 title={text.providerTitle}
               >
                 <option value="mock">Mock</option>
+                <option value="openai">OpenAI</option>
                 <option value="deepseek">DeepSeek</option>
+                <option value="claude">Claude</option>
+                <option value="zhipu">智谱</option>
               </select>
               <button onClick={toggleChatBox} className="text-fg-muted hover:text-fg">
                 <X size={14} />

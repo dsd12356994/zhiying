@@ -126,6 +126,7 @@ export function Preview() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const transitionVideoRef = useRef<HTMLVideoElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const audioNodesRef = useRef<Map<string, HTMLAudioElement>>(new Map());
   const textDragRef = useRef<{
     clipId: string;
     offsetX: number;
@@ -325,6 +326,57 @@ export function Preview() {
     }
     seekToOffset(tv, transitionContext.fromOffset, transitionContext.fromClip.id);
   }, [transitionContext]);
+
+  // ── 独立音频轨预览播放（BGM / 游戏音频 / SFX）────────────────────────────
+  useEffect(() => {
+    const audioClips = sortedClips.filter((c) => c.type === "audio" && !c.muted);
+    const activeIds = new Set<string>();
+
+    for (const clip of audioClips) {
+      const isActive = clip.start <= currentTime + CLIP_EPS && currentTime <= clip.end + CLIP_EPS;
+      if (!isActive) continue;
+      activeIds.add(clip.id);
+
+      let audio = audioNodesRef.current.get(clip.id);
+      if (!audio) {
+        audio = new Audio(clip.src);
+        audio.volume = Math.max(0, Math.min(1, clip.volume ?? 1));
+        audioNodesRef.current.set(clip.id, audio);
+      } else {
+        // update volume if changed
+        audio.volume = Math.max(0, Math.min(1, clip.volume ?? 1));
+      }
+
+      const sourceOffset = currentTime - clip.start + (clip.sourceStart ?? 0);
+      if (Math.abs(audio.currentTime - sourceOffset) > 0.35) {
+        audio.currentTime = Math.max(0, sourceOffset);
+      }
+
+      if (isPlaying && !muted) {
+        audio.play().catch(() => {});
+      } else {
+        audio.pause();
+      }
+    }
+
+    // Pause and clean up clips that are no longer active
+    for (const [id, audio] of audioNodesRef.current) {
+      if (!activeIds.has(id)) {
+        audio.pause();
+      }
+    }
+  }, [sortedClips, currentTime, isPlaying, muted]);
+
+  // Cleanup audio nodes on unmount
+  useEffect(() => {
+    return () => {
+      for (const audio of audioNodesRef.current.values()) {
+        audio.pause();
+        audio.src = "";
+      }
+      audioNodesRef.current.clear();
+    };
+  }, []);
 
   // 视频时间更新 -> 同步到时间轴 currentTime
   useEffect(() => {

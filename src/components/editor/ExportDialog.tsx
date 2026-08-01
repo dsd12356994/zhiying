@@ -98,6 +98,8 @@ export function ExportDialog({ open, onClose }: Props) {
         sourceStart: clip.sourceStart,
         sourceEnd: clip.sourceEnd,
         speed: clip.speed,
+        volume: clip.volume,
+        muted: clip.muted,
         filter: clip.filter,
         content: clip.content,
         fontSize: clip.fontSize,

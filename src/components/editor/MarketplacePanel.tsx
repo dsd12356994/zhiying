@@ -91,7 +91,7 @@ export function MarketplacePanel() {
       const file = new File([blob], preset.filename, { type: blob.type || "audio/mpeg" });
       const media = await addMedia(file);
       const start = Math.max(0, currentTime);
-      addProjectClip(media.id, 1, start);
+      addProjectClip(media.id, 2, start);
       addEditorClip({
         type: "audio",
         src: media.url,
@@ -99,8 +99,9 @@ export function MarketplacePanel() {
         end: start + media.duration,
         sourceStart: 0,
         sourceEnd: media.duration,
-        trackIndex: 1,
+        trackIndex: 2,
         name: media.name,
+        volume: 0.3,
       });
       setMessage(`${text.msgMusicOk} ${preset.label}`);
     } catch (error) {
