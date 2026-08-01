@@ -1,221 +1,239 @@
-<title>zhiying dashboard</title>
+<title>zhiying</title>
 <meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root { color-scheme: dark; }
+  :root {
+    color-scheme: dark;
+    --bg: #050505;
+    --fg: #f2f2ee;
+    --dim: #767672;
+    --line: #1c1c1a;
+    --accent: #2f5cff;
+  }
   * { box-sizing: border-box; }
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background:
-      radial-gradient(1200px 600px at 15% -10%, rgba(167,139,250,0.14), transparent 60%),
-      radial-gradient(900px 500px at 90% 0%, rgba(125,211,252,0.08), transparent 55%),
-      #07070d;
-    color: #e8e8ff;
+    background: var(--bg);
+    color: var(--fg);
     min-height: 100vh;
   }
-  .muted { color: #8a8aa8; font-size: 13px; }
+  .display { font-family: "Space Grotesk", sans-serif; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 0 56px; }
+  .muted { color: var(--dim); font-size: 13px; }
+  a { color: inherit; }
+  ::selection { background: var(--accent); color: #fff; }
 
   /* ---------- hero ---------- */
-  .hero {
-    padding: 56px 40px 32px;
-    text-align: center;
+  .hero { padding: 72px 0 40px; animation: rise .6s ease both; }
+  .hero-eyebrow {
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--dim); margin: 0 0 18px;
   }
   .hero-title {
-    font-size: 40px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
+    font-size: clamp(56px, 9vw, 128px);
+    line-height: 0.92;
+    font-weight: 700;
+    letter-spacing: -3px;
     margin: 0;
-    background: linear-gradient(90deg, #e8e8ff 10%, #a78bfa 55%, #7dd3fc 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: var(--fg);
   }
-  .hero-sub { margin-top: 8px; font-size: 14px; color: #9d9dc0; }
+  .hero-sub {
+    margin-top: 20px; max-width: 560px; font-size: 15px; line-height: 1.6; color: #b8b8b2;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
-  /* ---------- showcase ---------- */
-  .showcase { padding: 8px 40px 40px; max-width: 1280px; margin: 0 auto; }
-  .showcase-heading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
-  .showcase-heading h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 1.2px; color: #c4b5fd; margin: 0; font-weight: 700; }
-  .showcase-grid {
+  /* ---------- showcase (bento) ---------- */
+  .showcase { padding: 8px 0 64px; }
+  .showcase-heading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; border-top: 1px solid var(--line); padding-top: 22px; }
+  .showcase-heading h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: var(--fg);
+    margin: 0; font-weight: 500;
+  }
+  .bento {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 18px;
+    grid-template-columns: 1.4fr 1fr;
+    grid-template-rows: repeat(3, 168px);
+    gap: 2px;
+    background: var(--line);
+    border: 1px solid var(--line);
   }
-  .effect-card {
-    background: #0e0e18;
-    border: 1px solid #232336;
-    border-radius: 14px;
+  .tile {
+    position: relative;
     overflow: hidden;
-    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+    background: #000;
+    grid-column: 2;
   }
-  .effect-card:hover {
-    transform: translateY(-3px);
-    border-color: #4c3d8f;
-    box-shadow: 0 12px 32px -12px rgba(124, 58, 237, 0.45);
+  .tile.featured { grid-column: 1; grid-row: 1 / span 3; }
+  .tile video {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    filter: saturate(1.05);
+    transition: transform .5s cubic-bezier(.2,.8,.2,1), filter .3s ease;
   }
-  .effect-card video { width: 100%; aspect-ratio: 16/9; display: block; background: #000; object-fit: cover; }
-  .effect-card-body { padding: 14px 16px 16px; }
-  .effect-card-name { font-size: 14px; font-weight: 700; }
-  .effect-card-desc { font-size: 12px; color: #8a8aa8; margin-top: 4px; line-height: 1.5; }
-  .effect-card-tag {
-    display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .4px;
-    text-transform: uppercase; color: #a78bfa; background: rgba(167,139,250,0.12);
-    border-radius: 5px; padding: 2px 6px; margin-top: 8px;
+  .tile:hover video { transform: scale(1.035); filter: saturate(1.2) brightness(1.05); }
+  .tile-label {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 20px;
+    background: linear-gradient(0deg, rgba(0,0,0,.92) 0%, rgba(0,0,0,.55) 55%, transparent 100%);
+    pointer-events: none;
   }
+  .tile-name { font-size: 16px; font-weight: 700; }
+  .tile.featured .tile-name { font-size: 22px; }
+  .tile-desc { font-size: 12px; color: #c8c8c2; margin-top: 4px; line-height: 1.5; max-width: 46ch; }
+  .tile-tag {
+    display: inline-block; font-size: 10px; letter-spacing: .6px; text-transform: uppercase;
+    color: var(--accent); margin-top: 10px; font-weight: 500;
+  }
+  .tile-tag::before { content: "— "; color: var(--dim); }
 
   /* ---------- workspace ---------- */
-  .workspace { display: flex; border-top: 1px solid #1a1a2c; }
+  .workspace { border-top: 1px solid var(--line); display: flex; }
   aside {
-    width: 320px;
-    border-right: 1px solid #1a1a2c;
-    padding: 24px;
-    overflow-y: auto;
-    flex-shrink: 0;
-    max-height: calc(100vh - 260px);
+    width: 320px; border-right: 1px solid var(--line); padding: 32px 28px;
+    overflow-y: auto; flex-shrink: 0; max-height: calc(100vh - 300px);
   }
-  main { flex: 1; padding: 32px 40px; overflow-y: auto; max-height: calc(100vh - 260px); }
-  aside h1 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #c4b5fd; margin: 0 0 14px; font-weight: 700; }
-  main h2 { font-size: 22px; margin: 0 0 4px; }
+  main { flex: 1; padding: 32px 56px; overflow-y: auto; max-height: calc(100vh - 300px); }
+  aside h1 { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--dim); margin: 0 0 16px; font-weight: 500; }
+  main h2 { font-size: 26px; margin: 0 0 4px; font-weight: 700; }
 
   .project-item {
-    padding: 12px 14px;
-    border-radius: 10px;
-    cursor: pointer;
-    margin-bottom: 6px;
-    font-size: 14px;
-    border: 1px solid transparent;
-    transition: background .15s ease, border-color .15s ease;
+    padding: 12px 0; cursor: pointer; border-bottom: 1px solid var(--line);
+    transition: opacity .15s ease;
   }
-  .project-item:hover { background: #14142280; }
-  .project-item.active { background: #1c1733; border-color: #3d3268; }
-  .project-item .bar {
-    height: 4px; border-radius: 2px; background: #1e1e30; margin-top: 8px; overflow: hidden;
-  }
-  .project-item .bar > div { height: 100%; background: linear-gradient(90deg, #a78bfa, #7dd3fc); }
+  .project-item:hover { opacity: .7; }
+  .project-item.active { color: var(--fg); }
+  .project-item.active .project-item-name::before { content: "→ "; color: var(--accent); }
+  .project-item-name { font-size: 14px; font-weight: 500; }
+  .project-item .bar { height: 2px; background: var(--line); margin-top: 8px; overflow: hidden; }
+  .project-item .bar > div { height: 100%; background: var(--accent); }
 
-  form { margin-top: 26px; border-top: 1px solid #1a1a2c; padding-top: 18px; }
-  form > .form-title { font-size: 13px; font-weight: 700; color: #e8e8ff; }
-  label { display: block; font-size: 11px; color: #8a8aa8; margin: 12px 0 5px; text-transform: uppercase; letter-spacing: .4px; }
+  form { margin-top: 30px; border-top: 1px solid var(--line); padding-top: 20px; }
+  form > .form-title { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--dim); font-weight: 500; }
+  label { display: block; font-size: 10px; color: var(--dim); margin: 14px 0 5px; text-transform: uppercase; letter-spacing: .6px; }
   input, textarea {
-    width: 100%;
-    background: #14141f;
-    border: 1px solid #262640;
-    border-radius: 8px;
-    color: #e8e8ff;
-    padding: 9px 10px;
-    font-size: 13px;
-    font-family: inherit;
+    width: 100%; background: transparent; border: 1px solid var(--line); border-radius: 0;
+    color: var(--fg); padding: 9px 0; font-size: 13px; font-family: inherit;
   }
-  input:focus, textarea:focus { outline: none; border-color: #a78bfa; }
+  input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  input { border-width: 0 0 1px 0; }
+  textarea { border-width: 1px; padding: 8px; margin-top: 2px; }
   button {
-    background: linear-gradient(135deg, #a78bfa, #8b6ff0);
-    color: #0b0b12;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 18px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    margin-top: 14px;
-    transition: filter .15s ease, transform .1s ease;
+    background: var(--accent); color: #fff; border: none; border-radius: 0;
+    padding: 11px 20px; font-size: 12px; font-weight: 500; letter-spacing: .4px;
+    text-transform: uppercase; cursor: pointer; margin-top: 16px;
+    transition: opacity .15s ease;
   }
-  button:hover { filter: brightness(1.1); }
-  button:active { transform: scale(0.98); }
-  button:disabled { background: #26263c; color: #6f6f90; cursor: not-allowed; filter: none; }
+  button:hover { opacity: .82; }
+  button:disabled { background: var(--line); color: var(--dim); cursor: not-allowed; opacity: 1; }
 
-  .stage-row { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid #16162280; }
+  .stage-row { display: flex; align-items: center; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--line); }
   .stage-icon {
-    width: 24px; height: 24px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; flex-shrink: 0; font-weight: 700;
+    width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 11px;
+    border: 1px solid var(--line); color: var(--dim);
   }
-  .stage-icon.completed { background: #4ade80; color: #05130a; }
-  .stage-icon.pending { background: #1e1e30; color: #6f6f90; }
+  .stage-icon.completed { background: var(--accent); border-color: var(--accent); color: #fff; }
   .stage-body { flex: 1; }
   .stage-name { font-size: 14px; font-weight: 700; text-transform: capitalize; }
-  .stage-hint { font-size: 12px; color: #8a8aa8; margin-top: 2px; }
-  main video.render-preview { width: 100%; max-width: 640px; border-radius: 12px; margin-top: 18px; display: block; box-shadow: 0 16px 40px -16px rgba(0,0,0,0.6); }
-  pre { background: #14141f; border-radius: 8px; padding: 12px; font-size: 11px; overflow-x: auto; max-height: 200px; color: #b9a4fc; border: 1px solid #232336; }
-  details summary { cursor: pointer; font-size: 12px; color: #8a8aa8; margin-top: 8px; }
-  .error { color: #f87171; font-size: 13px; margin-top: 10px; white-space: pre-wrap; }
-  .empty { color: #6f6f90; font-size: 14px; margin-top: 60px; text-align: center; }
+  .stage-hint { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  main video.render-preview { width: 100%; max-width: 640px; margin-top: 20px; display: block; }
+  pre { background: #0c0c0a; border: 1px solid var(--line); padding: 12px; font-size: 11px; overflow-x: auto; max-height: 200px; color: #9fb4ff; }
+  details summary { cursor: pointer; font-size: 12px; color: var(--dim); margin-top: 8px; }
+  .error { color: #ff6b5e; font-size: 13px; margin-top: 10px; white-space: pre-wrap; }
+  .empty { color: var(--dim); font-size: 14px; margin-top: 60px; }
+
+  @media (max-width: 900px) {
+    .wrap { padding: 0 24px; }
+    .bento { grid-template-columns: 1fr; grid-template-rows: 220px repeat(3, 160px); }
+    .tile.featured { grid-column: 1; grid-row: 1; }
+    .tile { grid-column: 1; }
+    .workspace { flex-direction: column; }
+    aside { width: auto; max-height: none; }
+    main { max-height: none; }
+  }
 </style>
 
-<header class="hero">
-  <div class="hero-title">zhiying</div>
-  <div class="hero-sub">Agent-driven cinematic pipeline, built on Remotion</div>
-</header>
+<div class="wrap">
+  <header class="hero">
+    <div class="hero-eyebrow mono">AGENT-DRIVEN VIDEO PIPELINE</div>
+    <h1 class="hero-title display">zhiying</h1>
+    <p class="hero-sub">Describe a video, an agent authors and checkpoints it stage by stage, Remotion renders it. No manual timeline editing. The panel below is the effects layer actually doing the work — not a mockup.</p>
+  </header>
 
-<section class="showcase">
-  <div class="showcase-heading">
-    <h2>Effects Layer</h2>
-    <div class="muted">composer/src/effects/ — what a scene_plan cut actually renders</div>
+  <section class="showcase">
+    <div class="showcase-heading">
+      <h2 class="mono">Effects layer</h2>
+      <div class="muted mono">composer/src/effects/</div>
+    </div>
+    <div class="bento" id="effects-grid"></div>
+  </section>
+
+  <div class="workspace">
+    <aside>
+      <h1 class="mono">Projects</h1>
+      <div id="project-list"></div>
+
+      <form id="new-project-form">
+        <div class="form-title">New project</div>
+        <label>Topic</label>
+        <input name="topic" required placeholder="Product launch teaser">
+        <label>Tone (optional)</label>
+        <input name="tone" placeholder="confident, cinematic">
+        <label>Duration (seconds)</label>
+        <input name="duration_seconds" type="number" step="0.5" min="1" value="12" required>
+        <label>Signature moment</label>
+        <textarea name="signature_moment" rows="3" required placeholder="The one moment the viewer should feel something at."></textarea>
+        <button type="submit">Create + write brief</button>
+        <div id="new-project-error" class="error"></div>
+      </form>
+    </aside>
+
+    <main id="main">
+      <div class="empty">Select a project, or create a new one.</div>
+    </main>
   </div>
-  <div class="showcase-grid" id="effects-grid"></div>
-</section>
-
-<div class="workspace">
-  <aside>
-    <h1>Projects</h1>
-    <div id="project-list"></div>
-
-    <form id="new-project-form">
-      <div class="form-title">New project</div>
-      <label>Topic</label>
-      <input name="topic" required placeholder="Product launch teaser">
-      <label>Tone (optional)</label>
-      <input name="tone" placeholder="confident, cinematic">
-      <label>Duration (seconds)</label>
-      <input name="duration_seconds" type="number" step="0.5" min="1" value="12" required>
-      <label>Signature moment</label>
-      <textarea name="signature_moment" rows="3" required placeholder="The one moment the viewer should feel something at."></textarea>
-      <button type="submit">Create + write brief</button>
-      <div id="new-project-error" class="error"></div>
-    </form>
-  </aside>
-
-  <main id="main">
-    <div class="empty">Select a project, or create a new one.</div>
-  </main>
 </div>
 
 <script>
 const EFFECTS = [
   {
-    name: "3D Text Intro",
-    tag: "@remotion/three",
-    src: "/media/showcase/three-text-intro.mp4",
-    desc: "Extruded 3D typography with bevel + specular lighting, camera dolly and a light sweep -- both plain functions of frame.",
-  },
-  {
     name: "Particle Burst",
     tag: "custom GPU shader",
     src: "/media/showcase/particle-burst.mp4",
     desc: "2,200 points, seeded-deterministic direction/speed, driven by a single uProgress uniform. No useFrame, no accumulated state.",
+    featured: true,
+  },
+  {
+    name: "3D Text Intro",
+    tag: "@remotion/three",
+    src: "/media/showcase/three-text-intro.mp4",
+    desc: "Extruded typography with bevel + specular lighting, camera dolly and a light sweep.",
   },
   {
     name: "Shader Transition",
     tag: "GLSL fragment shader",
     src: "/media/showcase/shader-transition.mp4",
-    desc: "Fullscreen quad, noise-perturbed radial wipe -- the gl-transitions-style effect, authored directly against @remotion/three.",
+    desc: "Fullscreen quad, noise-perturbed radial wipe -- the gl-transitions-style effect.",
   },
   {
     name: "Lottie",
     tag: "@remotion/lottie",
     src: "/media/showcase/lottie-pulse.mp4",
-    desc: "Vector motion graphics via lottie-web, frame-synced automatically by the official Remotion wrapper.",
+    desc: "Vector motion graphics, frame-synced by the official Remotion wrapper.",
   },
 ];
 
 function renderEffectsGrid() {
   const grid = document.getElementById("effects-grid");
   grid.innerHTML = EFFECTS.map(fx => `
-    <div class="effect-card">
+    <div class="tile${fx.featured ? " featured" : ""}">
       <video src="${fx.src}" autoplay loop muted playsinline></video>
-      <div class="effect-card-body">
-        <div class="effect-card-name">${fx.name}</div>
-        <div class="effect-card-desc">${fx.desc}</div>
-        <span class="effect-card-tag">${fx.tag}</span>
+      <div class="tile-label">
+        <div class="tile-name display">${fx.name}</div>
+        <div class="tile-desc">${fx.desc}</div>
+        <span class="tile-tag mono">${fx.tag}</span>
       </div>
     </div>
   `).join("");
@@ -243,7 +261,7 @@ function renderProjectList() {
     const div = document.createElement("div");
     div.className = "project-item" + (p.project_id === state.selected ? " active" : "");
     const pct = Math.round((p.completed_stages.length / p.total_stages) * 100);
-    div.innerHTML = `<div>${p.project_id}</div>
+    div.innerHTML = `<div class="project-item-name">${p.project_id}</div>
       <div class="muted">${p.completed_stages.length}/${p.total_stages} stages${p.delivered ? " · delivered" : ""}</div>
       <div class="bar"><div style="width:${pct}%"></div></div>`;
     div.onclick = () => selectProject(p.project_id);
@@ -293,8 +311,8 @@ async function renderMain() {
   const videoSrc = composeCkpt ? `/media/pipelines/${detail.project_id}/render.mp4?t=${Date.now()}` : null;
 
   main.innerHTML = `
-    <h2>${detail.project_id}</h2>
-    <div class="muted">${detail.pipeline}</div>
+    <h2 class="display">${detail.project_id}</h2>
+    <div class="muted mono">${detail.pipeline}</div>
     ${rows}
     ${videoSrc ? `<video class="render-preview" controls src="${videoSrc}"></video>` : ""}
     <div id="stage-error" class="error"></div>
