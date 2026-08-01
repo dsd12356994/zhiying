@@ -1,0 +1,17 @@
+llm:
+  provider: null          # set once you decide which LLM API backs any in-pipeline text generation (not the operating agent itself)
+
+budget:
+  default_usd: 5.0
+  hard_cap_usd: null       # null = no hard cap, agent should still report cost before spending
+
+checkpoint:
+  dir: ./generated/checkpoints
+
+output:
+  dir: ./generated/output
+
+paths:
+  pipeline_dir: ./generated/pipelines
+  assets_dir: ./generated/assets
+  composer_dir: ./composer
