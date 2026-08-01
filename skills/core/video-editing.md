@@ -24,3 +24,28 @@ The `video_clip` cut type is the first (and so far only) cut that plays actual f
 ## Timing convention (30fps)
 
 No fixed range the way the procedural cut types have one -- a `video_clip`'s natural length depends entirely on the footage and what's being cut to. Use the surrounding scene plan's pacing (and the source clip's own content) as the guide, not a formula.
+
+## Transitioning between two clips (`composer/src/effects/shaders/VideoTransition.tsx`)
+
+`video_transition` applies `shader_transition`'s radial-wipe treatment (same GLSL, `skills/core/three-particles.md`) between two real clips instead of two flat colors:
+
+```ts
+{
+  type: "video_transition",
+  durationInFrames: 45,
+  fromSrc: "footage/scene-a.mp4",
+  fromTrimStart: 8.0,   // where scene-a should be when the transition starts
+  toSrc: "footage/scene-b.mp4",
+  toTrimStart: 0,        // where scene-b should be when the transition ends
+}
+```
+
+Use it *between* two `video_clip` cuts, picking `fromTrimStart`/`toTrimStart` to match where those clips actually left off/pick up, so the transition reads as continuous rather than each side jumping to frame 0. Don't use it as an opener -- like `shader_transition`, it needs real content on both sides.
+
+### The texture-loading gotcha that cost real debugging time
+
+Getting a video frame into a Three.js texture has two APIs, and the obvious one is a trap:
+
+- `useOffthreadVideoTexture` (`@remotion/three`) is **deprecated**, and empirically doesn't actually work for this: the console shows the texture resolving, but the captured render frame stays on the fallback color every time. Root cause (confirmed by reading `remotion.dev/docs/videos/as-threejs-texture`, not guessed): `<ThreeCanvas>` sets `frameloop="never"` during rendering and repaints via a `useEffect` on frame change; video-frame extraction is an async `BroadcastChannel` round-trip that resolves *after* that effect already ran, so the canvas is captured with the stale texture.
+- The current approach: `<Video src={...} onVideoFrame={...} muted headless />` from `@remotion/media`, drawing each frame into an `OffscreenCanvas` -> `CanvasTexture`, **and calling `advance(performance.now())`** (from `useThree()`, only when `useRemotionEnvironment().isRendering` is true -- use `invalidate()` in interactive preview) inside `onVideoFrame`. `advance()` forces the one extra synchronous repaint that makes the just-drawn frame actually show up in the capture. Skip it and you're back to a stale-frame render that *looks* fine in the browser console and is wrong in the output.
+- `trimBefore`/`trimAfter` on `<Video>` are in frames, same convention as `OffthreadVideo`'s `startFrom`/`endAt` -- confirmed the same way `video_clip`'s trim was (burned-in `testsrc2` timecode matching `trimStart + local_frame/fps` exactly).

@@ -6,6 +6,7 @@ import { TextIntro3D } from "./effects/three/TextIntro3D";
 import { ParticleBurst } from "./effects/three/ParticleBurst";
 import { ShaderTransition } from "./effects/shaders/ShaderTransition";
 import { VideoClip } from "./scenes/VideoClip";
+import { VideoTransition } from "./effects/shaders/VideoTransition";
 
 const renderCut = (cut: Cut): React.ReactElement => {
   switch (cut.type) {
@@ -19,6 +20,8 @@ const renderCut = (cut: Cut): React.ReactElement => {
       return <ShaderTransition {...cut} />;
     case "video_clip":
       return <VideoClip {...cut} />;
+    case "video_transition":
+      return <VideoTransition {...cut} />;
     default: {
       const neverCut: never = cut;
       throw new Error(`Unhandled cut type: ${JSON.stringify(neverCut)}`);

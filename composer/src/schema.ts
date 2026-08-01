@@ -41,12 +41,22 @@ export const videoClipCutSchema = z.object({
   volume: z.number().min(0).max(1).default(1),
 });
 
+export const videoTransitionCutSchema = z.object({
+  type: z.literal("video_transition"),
+  durationInFrames: z.number().int().positive(),
+  fromSrc: z.string(),
+  fromTrimStart: z.number().min(0).default(0),
+  toSrc: z.string(),
+  toTrimStart: z.number().min(0).default(0),
+});
+
 export const cutSchema = z.discriminatedUnion("type", [
   textCardCutSchema,
   threeTextIntroCutSchema,
   particleBurstCutSchema,
   shaderTransitionCutSchema,
   videoClipCutSchema,
+  videoTransitionCutSchema,
 ]);
 export type Cut = z.infer<typeof cutSchema>;
 

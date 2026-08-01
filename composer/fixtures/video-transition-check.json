@@ -1,0 +1,15 @@
+{
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "cuts": [
+    {
+      "type": "video_transition",
+      "durationInFrames": 60,
+      "fromSrc": "footage/test-pattern.mp4",
+      "fromTrimStart": 0,
+      "toSrc": "footage/test-pattern.mp4",
+      "toTrimStart": 8
+    }
+  ]
+}

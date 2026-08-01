@@ -17,7 +17,7 @@
         "required": ["type", "durationInFrames"],
         "properties": {
           "type": {
-            "enum": ["text_card", "three_text_intro", "particle_burst", "shader_transition", "video_clip"]
+            "enum": ["text_card", "three_text_intro", "particle_burst", "shader_transition", "video_clip", "video_transition"]
           },
           "durationInFrames": { "type": "integer", "exclusiveMinimum": 0 }
         }

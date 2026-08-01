@@ -2,7 +2,7 @@
 
 Turn the `brief` artifact into a `scene_plan` artifact: `{ fps, width, height, cuts: [...] }`, matching `schemas/artifacts/scene_plan.schema.json` for the stage contract and `composer/src/schema.ts`'s zod `cutSchema` for the actual per-cut fields (the Python-side schema deliberately doesn't duplicate those — see the schema file's own description).
 
-## The five cut types (`composer/src/effects/`, `composer/src/scenes/`)
+## The six cut types (`composer/src/effects/`, `composer/src/scenes/`)
 
 | type | good for | avoid when |
 |---|---|---|
@@ -11,6 +11,7 @@ Turn the `brief` artifact into a `scene_plan` artifact: `{ fps, width, height, c
 | `shader_transition` | a mood/scene shift (e.g. dark → brand color) | using it as an opener — it needs something before and after to transition *between* |
 | `text_card` | copy that needs to be read (taglines, stats, CTAs) | using it for everything — it's the cheapest-looking cut, don't let the plan lean on it |
 | `video_clip` | real footage (b-roll, product shots, anything the other four can't fake) | source has no real content to show yet -- see `skills/core/video-editing.md` for the placeholder-footage-until-Pexels-is-configured story |
+| `video_transition` | cutting between two `video_clip` cuts with intent, instead of a hard cut | using it as an opener (same caveat as `shader_transition` — needs real footage on both sides) or when a plain hard cut is the more honest choice; not every clip boundary needs a transition |
 
 ## Rules -- run the real gate, don't eyeball this
 
@@ -33,6 +34,7 @@ It checks: cuts' `durationInFrames` sum to `brief.duration_seconds * fps` within
 - `shader_transition`: 30–45 frames. Long enough to register as intentional, short enough to stay a transition.
 - `text_card`: 45–75 frames depending on copy length (roughly 3 frames/character as a floor, so it's actually readable).
 - `video_clip`: no fixed range -- driven by the footage and what's being cut to, not a formula. See `skills/core/video-editing.md`.
+- `video_transition`: 30–45 frames, same range as `shader_transition` -- it's the same wipe technique, just sampling two clips instead of two colors.
 
 ## Color
 
