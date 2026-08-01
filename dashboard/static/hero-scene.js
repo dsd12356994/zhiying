@@ -3,7 +3,9 @@
 // "render this exact frame in isolation" constraint here, a real person is
 // watching it continuously, so requestAnimationFrame + real delta-time is
 // the correct approach, not something to avoid.
-import * as THREE from "https://unpkg.com/three@0.169.0/build/three.module.js";
+import * as THREE from "three";
+import { FontLoader } from "three/addons/loaders/FontLoader.js";
+import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
 
 const PARTICLE_COUNT = 550;
 const CAMERA_DISTANCE = 32;
@@ -17,6 +19,8 @@ const REPEL_RADIUS = 16;
 const REPEL_STRENGTH = 14;
 const MOUSE_EASE = 0.08;
 const ACCENT_COLOR = 0x2f5cff;
+const TEXT_TILT_MAX = 0.22; // radians -- subtle, not a full look-at
+const TEXT_EASE = 0.06;
 
 const vertexShader = `
   attribute float aPhase;
@@ -120,6 +124,61 @@ export function initHeroScene(canvas, container) {
   const points = new THREE.Points(geometry, material);
   scene.add(points);
 
+  // Lighting for the 3D text mesh -- points/ShaderMaterial above doesn't
+  // need it (unlit, additive), but MeshStandardMaterial does.
+  scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+  const keyLight = new THREE.PointLight(0xffffff, 90, 0, 2);
+  keyLight.position.set(-10, 6, 14);
+  scene.add(keyLight);
+  const rimLight = new THREE.PointLight(ACCENT_COLOR, 60, 0, 2);
+  rimLight.position.set(12, -4, 10);
+  scene.add(rimLight);
+
+  // 3D "zhiying" wordmark -- same extrude/bevel/center recipe as
+  // composer/src/effects/three/TextIntro3D.tsx, ported to vanilla Three.js
+  // since this runs in the browser directly, not through Remotion. Reuses
+  // the same font asset (copied into dashboard/static/fonts/).
+  let textMesh = null;
+  const targetTilt = new THREE.Vector2(0, 0);
+  const smoothedTilt = new THREE.Vector2(0, 0);
+  const fontLoader = new FontLoader();
+  fontLoader.load(
+    "/static/fonts/helvetiker_bold.typeface.json",
+    (font) => {
+      const textGeo = new TextGeometry("zhiying", {
+        font,
+        size: 6.4,
+        depth: 1.6,
+        curveSegments: 8,
+        bevelEnabled: true,
+        bevelThickness: 0.14,
+        bevelSize: 0.12,
+        bevelSegments: 3,
+      });
+      textGeo.computeBoundingBox();
+      const box = textGeo.boundingBox;
+      textGeo.translate(-(box.max.x - box.min.x) / 2, -(box.max.y - box.min.y) / 2, 0);
+
+      const textMaterial = new THREE.MeshStandardMaterial({
+        color: 0xf2f2ee,
+        metalness: 0.25,
+        roughness: 0.35,
+      });
+      textMesh = new THREE.Mesh(textGeo, textMaterial);
+      // Roughly where the flat HTML title used to sit: left-of-center,
+      // upper portion of the hero. Hand-tuned against screenshots rather
+      // than derived from the HTML title's exact box -- this is a hero
+      // flourish, not a layout that needs pixel-perfect handoff.
+      textMesh.position.set(-16, 4, 0);
+      scene.add(textMesh);
+
+      const heroTitle = document.querySelector(".hero-title");
+      if (heroTitle) heroTitle.style.visibility = "hidden";
+    },
+    undefined,
+    (err) => console.warn("hero-scene: font load failed, keeping flat HTML title.", err),
+  );
+
   const targetMouse = new THREE.Vector2(9999, 9999);
   const smoothedMouse = new THREE.Vector2(9999, 9999);
 
@@ -129,8 +188,12 @@ export function initHeroScene(canvas, container) {
     const ndcY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     const { width: w, height: h } = visibleSizeAtZ0(camera);
     targetMouse.set(ndcX * (w / 2), ndcY * (h / 2));
+    targetTilt.set(ndcY * TEXT_TILT_MAX, ndcX * TEXT_TILT_MAX);
   };
-  const onPointerLeave = () => targetMouse.set(9999, 9999);
+  const onPointerLeave = () => {
+    targetMouse.set(9999, 9999);
+    targetTilt.set(0, 0);
+  };
 
   container.addEventListener("pointermove", onPointerMove);
   container.addEventListener("pointerleave", onPointerLeave);
@@ -139,9 +202,17 @@ export function initHeroScene(canvas, container) {
   const clock = new THREE.Clock();
   let rafId;
   const tick = () => {
+    const t = clock.getElapsedTime();
     smoothedMouse.lerp(targetMouse, MOUSE_EASE);
-    material.uniforms.uTime.value = clock.getElapsedTime();
+    material.uniforms.uTime.value = t;
     material.uniforms.uMouse.value.copy(smoothedMouse);
+
+    if (textMesh) {
+      smoothedTilt.lerp(targetTilt, TEXT_EASE);
+      textMesh.rotation.x = smoothedTilt.x;
+      textMesh.rotation.y = smoothedTilt.y + Math.sin(t * 0.15) * 0.03;
+    }
+
     renderer.render(scene, camera);
     rafId = requestAnimationFrame(tick);
   };
@@ -154,7 +225,13 @@ export function initHeroScene(canvas, container) {
     window.removeEventListener("resize", resize);
     geometry.dispose();
     material.dispose();
+    if (textMesh) {
+      textMesh.geometry.dispose();
+      textMesh.material.dispose();
+    }
     renderer.dispose();
+    const heroTitle = document.querySelector(".hero-title");
+    if (heroTitle) heroTitle.style.visibility = "";
   };
 }
 
