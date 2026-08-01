@@ -1,0 +1,21 @@
+{
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "cuts": [
+    {
+      "type": "text_card",
+      "durationInFrames": 60,
+      "title": "M1 Smoke Test",
+      "subtitle": "JSON props -> zod validation -> Cut dispatch -> mp4",
+      "background": "#0b0b12"
+    },
+    {
+      "type": "text_card",
+      "durationInFrames": 45,
+      "title": "Second Cut",
+      "subtitle": "Sequence offsets computed automatically",
+      "background": "#141225"
+    }
+  ]
+}
