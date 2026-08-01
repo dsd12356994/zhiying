@@ -32,11 +32,21 @@ export const shaderTransitionCutSchema = z.object({
   toColor: z.string().default("#0b0b12"),
 });
 
+export const videoClipCutSchema = z.object({
+  type: z.literal("video_clip"),
+  durationInFrames: z.number().int().positive(),
+  src: z.string(),
+  trimStart: z.number().min(0).default(0),
+  fit: z.enum(["cover", "contain", "fill"]).default("cover"),
+  volume: z.number().min(0).max(1).default(1),
+});
+
 export const cutSchema = z.discriminatedUnion("type", [
   textCardCutSchema,
   threeTextIntroCutSchema,
   particleBurstCutSchema,
   shaderTransitionCutSchema,
+  videoClipCutSchema,
 ]);
 export type Cut = z.infer<typeof cutSchema>;
 

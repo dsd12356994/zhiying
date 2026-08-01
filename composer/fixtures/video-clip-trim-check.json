@@ -1,0 +1,23 @@
+{
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "cuts": [
+    {
+      "type": "video_clip",
+      "durationInFrames": 45,
+      "src": "footage/test-pattern.mp4",
+      "trimStart": 0,
+      "fit": "cover",
+      "volume": 1
+    },
+    {
+      "type": "video_clip",
+      "durationInFrames": 45,
+      "src": "footage/test-pattern.mp4",
+      "trimStart": 6,
+      "fit": "cover",
+      "volume": 1
+    }
+  ]
+}

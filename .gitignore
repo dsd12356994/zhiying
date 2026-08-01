@@ -40,3 +40,10 @@ generated/pipelines/
 generated/assets/
 generated/output/
 generated/checkpoints/
+
+# Footage for video_clip cuts -- placeholder_footage-generated test clips are
+# regeneratable in one tool call (tools/video/placeholder_footage.py) and can
+# run several MB each; real sourced footage (Pexels/etc, once configured)
+# belongs here too and shouldn't bloat the repo either. Unlike
+# generated/showcase/, nothing depends on a specific file existing here.
+composer/public/footage/

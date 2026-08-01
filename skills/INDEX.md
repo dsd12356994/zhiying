@@ -18,5 +18,6 @@ Three-layer knowledge architecture. Read in this order when starting any stage o
 
 - `skills/core/three-particles.md` — frame-purity rules, the color-management gotcha, and the fullscreen-quad shader pattern for `composer/src/effects/three/` and `effects/shaders/`.
 - `skills/core/vector-motion.md` — Lottie/Rive wrapper usage (`effects/vector/`), including the Bodymovin easing gotcha that looks like a determinism bug but isn't.
+- `skills/core/video-editing.md` — real footage via `video_clip` (`composer/src/scenes/VideoClip.tsx`), trim semantics, and the placeholder-footage-until-Pexels-is-configured story.
 
-*(creative/ and remaining core/ guides populated as M3–M5 land.)*
+*(`skills/creative/` still empty -- add guides there as pipelines actually need creative judgment codified, not speculatively.)*
