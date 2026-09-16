@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "timeline_ir.schema.json",
+  "title": "Timeline IR (OpenTimelineIO)",
+  "type": "object",
+  "required": ["media_path", "otio_path", "segments", "exports"],
+  "properties": {
+    "media_path": {
+      "type": "string",
+      "description": "Absolute path of the source media referenced by the timeline."
+    },
+    "otio_path": {
+      "type": "string",
+      "description": "Path of the .otio file -- the canonical IR artifact. All other exports derive from it."
+    },
+    "segments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["source_start", "duration"],
+        "properties": {
+          "source_start": {
+            "type": ["string", "number"],
+            "description": "Start in the source media, seconds (rational strings like '84/30' preferred -- exact, no float drift)."
+          },
+          "duration": {
+            "type": ["string", "number"],
+            "description": "Segment duration in seconds (rational strings preferred)."
+          },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "exports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["format", "path"],
+        "properties": {
+          "format": { "type": "string", "enum": ["otio", "fcpxml", "edl"] },
+          "path": { "type": "string" }
+        }
+      }
+    },
+    "qc_passed": {
+      "type": "boolean",
+      "description": "Whether run_timeline_gates() passed on these segments before checkpointing."
+    },
+    "notes": { "type": "string" }
+  }
+}

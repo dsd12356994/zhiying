@@ -23,7 +23,8 @@ This repository has **no standalone orchestrator process**. There is no webhook,
 
 ## Current pipelines
 
-- `cinematic-trailer` (`pipeline_defs/cinematic-trailer.yaml`, `skills/pipelines/cinematic-trailer/`) — the only one that exists. 15–30s cinematic/trailer style, built to exercise the `composer/src/effects/` layer.
+- `cinematic-trailer` (`pipeline_defs/cinematic-trailer.yaml`, `skills/pipelines/cinematic-trailer/`) — 15–30s cinematic/trailer style, built to exercise the `composer/src/effects/` layer.
+- `nle-handoff` (`pipeline_defs/nle-handoff.yaml`, `skills/pipelines/nle-handoff/`) — raw footage → auto-editor rough cut → OpenTimelineIO timeline IR → multi-NLE exports (.otio/.fcpxml/.edl). The "agent drives real NLEs" direction; roadmap context in `docs/research/ai-video-editing-landscape.md`. Fully local, budget 0.
 
 ## Local dashboard (`dashboard/`)
 

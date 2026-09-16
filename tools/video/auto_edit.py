@@ -129,9 +129,19 @@ class AutoEditorTool(BaseTool):
             str(p) for p in sorted(output_dir.iterdir()) if p.is_file()
         ] if output_dir.is_dir() else []
 
+        # output_path must point at THIS call's artifact, not whatever else
+        # lives in output_dir (live-test bug 2026-09-16: two calls sharing
+        # one dir made output_path an .mp4 when timeline mode was asked for).
+        if mode == "timeline":
+            base_stem = f"{input_path.stem}_{export}"
+            own = [p for p in produced if Path(p).stem == base_stem]
+        else:
+            own = [p for p in produced if Path(p).name == f"{input_path.stem}_cut{input_path.suffix}"]
+        output_path = Path(own[0]) if own else None
+
         return ToolResult(
             success=True,
-            output_path=Path(produced[0]) if produced else None,
+            output_path=output_path,
             metadata={
                 "cmd": cmd,
                 "mode": mode,

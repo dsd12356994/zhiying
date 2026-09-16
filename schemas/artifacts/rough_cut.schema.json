@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rough_cut.schema.json",
+  "title": "Rough cut",
+  "type": "object",
+  "required": ["media_path", "cut_path", "edit_rule", "margin"],
+  "properties": {
+    "media_path": {
+      "type": "string",
+      "description": "Absolute path of the immutable source media."
+    },
+    "cut_path": {
+      "type": "string",
+      "description": "Path of the rendered rough-cut media (auto-editor render mode)."
+    },
+    "edit_rule": {
+      "type": "string",
+      "description": "The auto-editor edit rule used, verbatim (e.g. 'audio:threshold=4%'). Recorded so the cut is auditable -- see skills/core/nle-timeline-export.md."
+    },
+    "margin": {
+      "type": "string",
+      "description": "Padding around kept segments (e.g. '0.2sec')."
+    },
+    "fcpxml_path": {
+      "type": "string",
+      "description": "Path of the auto-editor timeline export (resolve/fcpxml) carrying the exact cut decisions for the next stage."
+    },
+    "notes": { "type": "string" }
+  }
+}

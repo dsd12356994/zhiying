@@ -13,6 +13,7 @@ Three-layer knowledge architecture. Read in this order when starting any stage o
 ## Current pipelines
 
 - `skills/pipelines/cinematic-trailer/` — flagship style, 15–30s, 3D/particle/shader-heavy. Manifest: `pipeline_defs/cinematic-trailer.yaml`. Stages: `brief` → `scene_plan` → `assets` → `compose` → `deliver`.
+- `skills/pipelines/nle-handoff/` — rough cut + NLE timeline handoff. Manifest: `pipeline_defs/nle-handoff.yaml`. Stages: `brief` → `rough_cut` → `timeline` (OTIO IR) → `deliver`.
 
 ## Current core/creative skills
 

@@ -1,0 +1,51 @@
+name: nle-handoff
+description: >
+  NLE handoff pipeline: take raw footage, rough-cut it (auto-editor),
+  materialize the cut decisions as an OpenTimelineIO timeline IR, and
+  deliver editable timeline files for any NLE (Resolve / Premiere / FCP /
+  Shotcut / Kdenlive) alongside the cut render. Built from the survey's
+  short+mid-term roadmap (docs/research/ai-video-editing-landscape.md §4).
+
+orchestration:
+  mode: agent-driven
+  budget_default_usd: 0.0  # fully local: no API keys, no paid services
+
+required_skills:
+  - core/nle-timeline-export
+
+stages:
+  - name: brief
+    skill: pipelines/nle-handoff/executive-producer
+    produces: brief
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus: "Is the source media named and concrete (a real file the user pointed at), and is the handoff intent (which NLE, what the human will do next) explicit?"
+
+  - name: rough_cut
+    skill: pipelines/nle-handoff/rough-cut-director
+    required_artifacts_in: [brief]
+    produces: rough_cut
+    required_tools: [auto_editor]
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus: "Cut render duration sane vs source? Edit rule and margin recorded so the cut is auditable?"
+
+  - name: timeline
+    skill: pipelines/nle-handoff/timeline-director
+    required_artifacts_in: [rough_cut]
+    produces: timeline_ir
+    required_tools: [auto_editor, otio_timeline]
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus: "Segments came from the auto-editor FCPXML (exact rational time), run_timeline_gates passed, .otio is the canonical artifact?"
+    success_criteria:
+      - "run_timeline_gates() passed with zero fail findings before checkpointing"
+      - "exports include at least otio + one NLE-importable format (fcpxml or edl)"
+      - "segment times are exact rationals derived from auto-editor's FCPXML, not re-measured floats"
+
+  - name: deliver
+    skill: pipelines/nle-handoff/deliver-director
+    required_artifacts_in: [timeline_ir]
+    produces: final_delivery
+    checkpoint_required: true
+    human_approval_default: true

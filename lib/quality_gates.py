@@ -127,6 +127,58 @@ def check_scene_pacing(scene_plan: dict[str, Any]) -> GateReport:
     return report
 
 
+def check_timeline_segments(
+    segments: list[dict[str, Any]],
+    source_duration_seconds: float | None = None,
+    media_path: str | Path | None = None,
+) -> GateReport:
+    """Structural gates for an NLE timeline's segment list (seconds-based,
+    the shape tools/video/otio_timeline.py consumes). Checks the things a
+    broken cut list actually gets wrong: empty list, non-positive
+    durations, segments running past the source media, missing media.
+    Creative pacing is NOT judged here -- same split as scene_plan gates.
+    """
+    from pathlib import Path as _Path
+
+    report = GateReport()
+    if not segments:
+        report.add("fail", "timeline has no segments -- nothing to export.")
+        return report
+
+    for i, seg in enumerate(segments):
+        start = seg.get("source_start", 0.0)
+        duration = seg.get("duration", 0.0)
+        if duration <= 0:
+            report.add(
+                "fail",
+                f"segment[{i}] has non-positive duration ({duration}s).",
+            )
+        if start < 0:
+            report.add("fail", f"segment[{i}] starts before source start ({start}s).")
+        if source_duration_seconds is not None and start + duration > source_duration_seconds + 0.05:
+            report.add(
+                "fail",
+                f"segment[{i}] ({start}s +{duration}s) runs past source "
+                f"duration {source_duration_seconds}s -- timeline would "
+                "reference media that doesn't exist.",
+            )
+
+    if media_path is not None and not _Path(media_path).exists():
+        report.add("fail", f"media file not found: {media_path}")
+
+    return report
+
+
+def run_timeline_gates(
+    segments: list[dict[str, Any]],
+    source_duration_seconds: float | None = None,
+    media_path: str | Path | None = None,
+) -> GateReport:
+    """Combined gate for the timeline stage of NLE pipelines. Call before
+    checkpointing a timeline artifact as completed."""
+    return check_timeline_segments(segments, source_duration_seconds, media_path)
+
+
 def run_scene_plan_gates(
     scene_plan: dict[str, Any], expected_duration_seconds: float | None = None
 ) -> GateReport:
