@@ -47,5 +47,6 @@ stages:
     skill: pipelines/nle-handoff/deliver-director
     required_artifacts_in: [timeline_ir]
     produces: final_delivery
+    optional_tools: [jianying_draft]
     checkpoint_required: true
     human_approval_default: true
