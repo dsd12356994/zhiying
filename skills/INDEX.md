@@ -21,5 +21,6 @@ Three-layer knowledge architecture. Read in this order when starting any stage o
 - `skills/core/vector-motion.md` — Lottie/Rive wrapper usage (`effects/vector/`), including the Bodymovin easing gotcha that looks like a determinism bug but isn't.
 - `skills/core/video-editing.md` — real footage via `video_clip` (`composer/src/scenes/VideoClip.tsx`), trim semantics, and the placeholder-footage-until-Pexels-is-configured story.
 - `skills/core/nle-timeline-export.md` — rough cuts + NLE timeline handoff (Premiere/Resolve/FCP/Shotcut/Kdenlive) via `tools/video/auto_edit.py`; source-media-immutability and audit rules. 剪映 delivery is `tools/video/jianying_draft.py` (used by the nle-handoff deliver stage).
+- `skills/core/resolve-control.md` — live DaVinci Resolve control (**UNTESTED until a Resolve machine exists**; today's tested Resolve path is FCPXML export + manual import). Route A: davinci-resolve-mcp. Route B: `tools/video/resolve_control.py`.
 
 *(`skills/creative/` still empty -- add guides there as pipelines actually need creative judgment codified, not speculatively.)*
