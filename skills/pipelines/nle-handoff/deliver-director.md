@@ -20,10 +20,15 @@ working — plus an honest statement of what they're getting.
    additionally run `jianying_draft` with the SAME segments (they're in
    the timeline_ir artifact) — it writes a draft directly into the 剪映
    draft folder, so the user just opens 剪映 and the project is there,
-   no import step. Record `draft_path` in the delivery notes. The tool
-   replaces same-name drafts (`allow_replace`) — never point it at a
-   name the user cares about. Caveat: the draft references media by
-   absolute path, so media must stay put (same as the XML exports).
+   no import step. Beyond the bare cut, the tool can enrich the draft:
+   `texts` (title/caption cards), `subtitle_srt` (verbatim .srt import),
+   `effect` (any of pyJianYingDraft's 1097 VideoSceneEffectType names —
+   Chinese names, e.g. 复古DV), `transition` (between adjacent video
+   clips, e.g. 中心旋转), `fade`. Record `draft_path` + applied
+   enrichments in the delivery notes. The tool replaces same-name drafts
+   (`allow_replace`) — never point it at a name the user cares about.
+   Caveat: the draft references media by absolute path, so media must
+   stay put (same as the XML exports).
 4. Checkpoint `final_delivery` (`final_path` = the delivery dir or its
    README; `notes` = the handoff instructions). This stage has
    `human_approval_default: true` — the user confirms the package

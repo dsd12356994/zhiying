@@ -73,11 +73,28 @@ class JianyingDraftTool(BaseTool):
         height: int = 1080,
         fps: int = 30,
         draft_folder: Path | None = None,
+        texts: list[dict[str, Any]] | None = None,
+        subtitle_srt: Path | None = None,
+        effect: str | None = None,
+        transition: str | None = None,
+        fade: str | None = None,
     ) -> ToolResult:
         """segments: same shape as otio_timeline's (source_start/duration in
         rational seconds). draft_folder defaults to the local 剪映 draft
         root (override with JIANYING_DRAFT_FOLDER). Existing drafts with
-        the same name are replaced."""
+        the same name are replaced.
+
+        Enrichments (all optional, all on timeline coordinates):
+          texts: [{"text", "start", "duration", "size"?, "color"? (rgb
+            0-255 tuple)}] -- title cards / captions as text segments.
+          subtitle_srt: path to an .srt file -- imported verbatim as a
+            subtitle text track (import_srt handles timing/line-breaking).
+          effect: name of a pyJianYingDraft VideoSceneEffectType (1097
+            available) applied over the whole timeline.
+          transition: name of a TransitionType applied between adjacent
+            video clips (video tracks only, 2+ clips).
+          fade: "0.5s"-style in/out fade applied to every video clip.
+        """
         try:
             import pyJianYingDraft as jy
         except ImportError as exc:
@@ -128,6 +145,8 @@ class JianyingDraftTool(BaseTool):
                 )
 
             timeline_cursor = Fraction(0)
+            video_clips: list[Any] = []
+            transition_dur = "0.3s"  # add_transition default feel; expose later if needed
             for seg in segments:
                 dur = _rational_seconds(seg["duration"])
                 src = _rational_seconds(seg["source_start"])
@@ -135,8 +154,54 @@ class JianyingDraftTool(BaseTool):
                     jy.trange(us(timeline_cursor), us(dur)),
                     jy.trange(us(src), us(dur)),
                 )
+                if video:
+                    if fade:
+                        clip.add_fade(fade, fade)
+                    if transition and video_clips:
+                        clip.add_transition(
+                            jy.TransitionType[transition], duration=transition_dur
+                        )
                 script.add_segment(clip)
+                video_clips.append(clip)
                 timeline_cursor += dur
+
+            # -- enrichments ------------------------------------------------
+            applied: dict[str, Any] = {}
+            if effect:
+                # Effect tracks must also be appended explicitly (same
+                # live-test lesson as media tracks).
+                script.append_track(jy.TrackSpec(jy.TrackType.effect))
+                total_us = us(timeline_cursor)
+                script.add_effect(
+                    jy.VideoSceneEffectType[effect],
+                    jy.trange(0, total_us) if total_us > 0 else jy.trange(0, _US),
+                )
+                applied["effect"] = effect
+            if texts:
+                script.append_track(jy.TrackSpec(jy.TrackType.text))
+                for t in texts:
+                    color = t.get("color", (255, 255, 255))
+                    style = jy.TextStyle(
+                        size=t.get("size", 8.0),
+                        color=tuple(c / 255.0 for c in color),  # type: ignore[arg-type]
+                    )
+                    text_seg = jy.TextSegment(
+                        t["text"],
+                        jy.trange(us(_rational_seconds(t["start"])), us(_rational_seconds(t["duration"]))),
+                        style=style,
+                    )
+                    script.add_segment(text_seg)
+                applied["texts"] = len(texts)
+            if subtitle_srt:
+                subtitle_srt = Path(subtitle_srt)
+                if not subtitle_srt.exists():
+                    return ToolResult(success=False, error=f"srt not found: {subtitle_srt}")
+                script.import_srt(str(subtitle_srt), "zhiying_subtitles")
+                applied["subtitles"] = str(subtitle_srt)
+            if transition:
+                applied["transition"] = transition
+            if fade:
+                applied["fade"] = fade
 
             script.save()
         except Exception as exc:
@@ -153,10 +218,12 @@ class JianyingDraftTool(BaseTool):
             content = json.load(fh)
         n_tracks = len(content.get("tracks", []))
         n_segs = sum(len(t.get("segments", [])) for t in content.get("tracks", []))
-        if n_segs != len(segments):
+        # With texts/subtitles the total exceeds the media clip count, so
+        # only a SHORTFALL is a failure (a clip silently dropped).
+        if n_segs < len(segments):
             return ToolResult(
                 success=False,
-                error=f"draft has {n_segs} segments, expected {len(segments)}",
+                error=f"draft has {n_segs} segments, fewer than the {len(segments)} media clips requested",
             )
 
         return ToolResult(
@@ -168,6 +235,7 @@ class JianyingDraftTool(BaseTool):
                 "tracks": n_tracks,
                 "segments": n_segs,
                 "duration_us": us(timeline_cursor),
+                "applied": applied,
             },
         )
 
