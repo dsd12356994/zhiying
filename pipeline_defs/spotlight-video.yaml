@@ -1,0 +1,57 @@
+name: spotlight-video
+description: >
+  Vertical (720x1280) "project spotlight" episode: an LLM of ANY provider
+  (OpenAI-compatible endpoint or local Ollama — see lib/llm.py) authors a
+  validated props spec, Remotion renders it into the reference card style
+  (browser chrome + numbered tag + star-badge count-up + dark demo panel +
+  subtitle pill + brand bar). This is the "any AI API can drive Remotion to
+  this quality" pipeline: the model authors VALUES, the template owns the
+  craft, so output never depends on a model's ability to write React.
+
+orchestration:
+  mode: agent-driven
+  budget_default_usd: 0.0  # free on the local-Ollama path; cloud keys bill at the endpoint
+
+required_skills:
+  - core/motion-graphics-overlay  # alpha/overlay rules when the panel needs compositing
+
+stages:
+  - name: brief
+    skill: pipelines/spotlight-video/executive-producer
+    produces: brief
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus: "Is the subject ONE concrete project/topic (not a list), with the episode position (index/total), target language and brand named?"
+
+  - name: script
+    skill: pipelines/spotlight-video/script-director
+    required_artifacts_in: [brief]
+    produces: spotlight_script
+    required_tools: [spotlight_author]
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus: "Does the subtitle say something specific about THIS project (no marketing filler)? Tags topical, not adjectives? Star count real, or explicitly 0/unknown?"
+    success_criteria:
+      - "spotlight_author returned success=true and the props passed schemas/artifacts/spotlight_script.schema.json"
+      - "subtitle is <= 40 characters in the target language and names what the project actually does"
+      - "no invented star count for a real named project"
+
+  - name: compose
+    skill: pipelines/spotlight-video/compose-director
+    required_artifacts_in: [spotlight_script]
+    produces: render
+    required_tools: [remotion_render]
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus: "Render succeeded at 720x1280; duration matches the authored cut count; visual QC (local VLM frame review or human) found no clipping/overlap."
+    success_criteria:
+      - "output mp4 is 720x1280 and non-empty"
+      - "a rendered frame was actually looked at (VLM review or human), not assumed correct from exit code 0"
+
+  - name: deliver
+    skill: pipelines/spotlight-video/deliver-director
+    required_artifacts_in: [render]
+    produces: final_delivery
+    optional_tools: [jianying_draft]
+    checkpoint_required: true
+    human_approval_default: true

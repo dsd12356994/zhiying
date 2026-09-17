@@ -14,6 +14,7 @@ Three-layer knowledge architecture. Read in this order when starting any stage o
 
 - `skills/pipelines/cinematic-trailer/` — flagship style, 15–30s, 3D/particle/shader-heavy. Manifest: `pipeline_defs/cinematic-trailer.yaml`. Stages: `brief` → `scene_plan` → `assets` → `compose` → `deliver`.
 - `skills/pipelines/nle-handoff/` — rough cut + NLE timeline handoff. Manifest: `pipeline_defs/nle-handoff.yaml`. Stages: `brief` → `rough_cut` → `timeline` (OTIO IR) → `deliver`.
+- `skills/pipelines/spotlight-video/` — vertical project-spotlight episodes: **any** LLM authors validated props, Remotion renders the card style. Manifest: `pipeline_defs/spotlight-video.yaml`. Stages: `brief` → `script` → `compose` → `deliver`. Model access: `lib/llm.py`.
 
 ## Current core/creative skills
 

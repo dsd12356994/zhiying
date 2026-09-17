@@ -60,6 +60,21 @@ export const statCardCutSchema = z.object({
   position: z.enum(["bottom-left", "bottom-right", "top-left", "top-right", "center"]).default("bottom-left"),
 });
 
+export const projectSpotlightCutSchema = z.object({
+  type: z.literal("project_spotlight"),
+  durationInFrames: z.number().int().positive(),
+  index: z.number().int().positive(),
+  total: z.number().int().positive(),
+  name: z.string(),
+  stars: z.number().int().min(0),
+  tags: z.array(z.string()).default([]),
+  demoTitle: z.string(),
+  demoImage: z.string().optional(),
+  demoFooter: z.string().optional(),
+  subtitle: z.string(),
+  brand: z.string().default("Oraink"),
+});
+
 export const cutSchema = z.discriminatedUnion("type", [
   textCardCutSchema,
   threeTextIntroCutSchema,
@@ -68,6 +83,7 @@ export const cutSchema = z.discriminatedUnion("type", [
   videoClipCutSchema,
   videoTransitionCutSchema,
   statCardCutSchema,
+  projectSpotlightCutSchema,
 ]);
 export type Cut = z.infer<typeof cutSchema>;
 

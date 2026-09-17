@@ -25,6 +25,7 @@ This repository has **no standalone orchestrator process**. There is no webhook,
 
 - `cinematic-trailer` (`pipeline_defs/cinematic-trailer.yaml`, `skills/pipelines/cinematic-trailer/`) — 15–30s cinematic/trailer style, built to exercise the `composer/src/effects/` layer.
 - `nle-handoff` (`pipeline_defs/nle-handoff.yaml`, `skills/pipelines/nle-handoff/`) — raw footage → auto-editor rough cut → OpenTimelineIO timeline IR → multi-NLE exports (.otio/.fcpxml/.edl). The "agent drives real NLEs" direction; roadmap context in `docs/research/ai-video-editing-landscape.md`. Fully local, budget 0.
+- `spotlight-video` (`pipeline_defs/spotlight-video.yaml`, `skills/pipelines/spotlight-video/`) — vertical (720x1280) card-style episodes. **Any LLM** (OpenAI-compatible endpoint, or local Ollama) authors a schema-validated props spec; Remotion renders it. The model authors values, the template owns the craft — quality doesn't depend on the model writing code. Model access lives in `lib/llm.py` (`ZHIYING_LLM_*` env, Ollama fallback).
 
 ## Local dashboard (`dashboard/`)
 

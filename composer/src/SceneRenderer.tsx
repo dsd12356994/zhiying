@@ -8,6 +8,7 @@ import { ShaderTransition } from "./effects/shaders/ShaderTransition";
 import { VideoClip } from "./scenes/VideoClip";
 import { VideoTransition } from "./effects/shaders/VideoTransition";
 import { StatCard } from "./scenes/StatCard";
+import { ProjectSpotlight } from "./scenes/ProjectSpotlight";
 
 const renderCut = (cut: Cut): React.ReactElement => {
   switch (cut.type) {
@@ -25,6 +26,8 @@ const renderCut = (cut: Cut): React.ReactElement => {
       return <VideoTransition {...cut} />;
     case "stat_card":
       return <StatCard {...cut} />;
+    case "project_spotlight":
+      return <ProjectSpotlight {...cut} />;
     default: {
       const neverCut: never = cut;
       throw new Error(`Unhandled cut type: ${JSON.stringify(neverCut)}`);

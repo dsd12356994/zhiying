@@ -21,6 +21,27 @@ const defaultProps: CompositionProps = {
   ],
 };
 
+const spotlightDefaultProps: CompositionProps = {
+  fps: 30,
+  width: 720,
+  height: 1280,
+  transparent: false,
+  cuts: [
+    {
+      type: "project_spotlight",
+      durationInFrames: 210,
+      index: 1,
+      total: 5,
+      name: "screenshot-to-code",
+      stars: 77300,
+      tags: ["截图转代码", "前端工程", "AI 编程"],
+      demoTitle: "Official result demo",
+      subtitle: "左边贴截图，右边生成页面预览和代码；",
+      brand: "Oraink",
+    },
+  ],
+};
+
 export const RemotionRoot: React.FC = () => {
   return (
     <>
@@ -51,6 +72,25 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         width={800}
         height={800}
+      />
+      {/* Vertical "project spotlight" style (720x1280) — the reference look
+          the agent-authored spotlight pipeline targets. Same data-driven
+          props contract as CinematicTrailer; render with --props. */}
+      <Composition
+        id="Spotlight"
+        component={SceneRenderer}
+        schema={compositionPropsSchema}
+        durationInFrames={totalDurationInFrames(spotlightDefaultProps.cuts)}
+        fps={30}
+        width={720}
+        height={1280}
+        defaultProps={spotlightDefaultProps}
+        calculateMetadata={async ({ props }) => ({
+          durationInFrames: totalDurationInFrames(props.cuts),
+          fps: props.fps,
+          width: props.width,
+          height: props.height,
+        })}
       />
     </>
   );
