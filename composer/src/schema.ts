@@ -50,6 +50,16 @@ export const videoTransitionCutSchema = z.object({
   toTrimStart: z.number().min(0).default(0),
 });
 
+export const statCardCutSchema = z.object({
+  type: z.literal("stat_card"),
+  durationInFrames: z.number().int().positive(),
+  value: z.string(),
+  label: z.string().optional(),
+  accent: z.string().default("#7dd3fc"),
+  // Overlay placement on the underlying footage (percentages of the canvas).
+  position: z.enum(["bottom-left", "bottom-right", "top-left", "top-right", "center"]).default("bottom-left"),
+});
+
 export const cutSchema = z.discriminatedUnion("type", [
   textCardCutSchema,
   threeTextIntroCutSchema,
@@ -57,6 +67,7 @@ export const cutSchema = z.discriminatedUnion("type", [
   shaderTransitionCutSchema,
   videoClipCutSchema,
   videoTransitionCutSchema,
+  statCardCutSchema,
 ]);
 export type Cut = z.infer<typeof cutSchema>;
 
@@ -65,6 +76,12 @@ export const compositionPropsSchema = z.object({
   width: z.number().int().positive().default(1920),
   height: z.number().int().positive().default(1080),
   cuts: z.array(cutSchema).min(1),
+  // true = render with NO background fill, so the clip carries an alpha
+  // channel and drops on top of footage in an NLE timeline (the
+  // motion-graphics-overlay workflow). Individual cuts that paint their
+  // own opaque background still do -- transparency is opt-in per cut
+  // design (text_card etc. keep theirs; stat_card never paints one).
+  transparent: z.boolean().default(false),
 });
 export type CompositionProps = z.infer<typeof compositionPropsSchema>;
 

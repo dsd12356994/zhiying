@@ -9,6 +9,7 @@ const defaultProps: CompositionProps = {
   fps: 30,
   width: 1920,
   height: 1080,
+  transparent: false,
   cuts: [
     {
       type: "text_card",

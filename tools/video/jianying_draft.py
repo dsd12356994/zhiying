@@ -78,6 +78,7 @@ class JianyingDraftTool(BaseTool):
         effect: str | None = None,
         transition: str | None = None,
         fade: str | None = None,
+        overlays: list[dict[str, Any]] | None = None,
     ) -> ToolResult:
         """segments: same shape as otio_timeline's (source_start/duration in
         rational seconds). draft_folder defaults to the local 剪映 draft
@@ -94,6 +95,10 @@ class JianyingDraftTool(BaseTool):
           transition: name of a TransitionType applied between adjacent
             video clips (video tracks only, 2+ clips).
           fade: "0.5s"-style in/out fade applied to every video clip.
+          overlays: [{"path", "start", "duration"}] -- transparent motion-
+            graphics clips (ProRes 4444 from the composer) placed on a
+            second video track above the main cut; 剪映 composites their
+            alpha natively.
         """
         try:
             import pyJianYingDraft as jy
@@ -202,6 +207,30 @@ class JianyingDraftTool(BaseTool):
                 applied["transition"] = transition
             if fade:
                 applied["fade"] = fade
+            if overlays:
+                # Motion-graphics overlay layer (skills/core/
+                # motion-graphics-overlay.md): transparent ProRes 4444
+                # clips rendered by the composer land on a SECOND video
+                # track above the main cut; 剪映 composites their alpha
+                # natively -- no keying needed. The track needs a distinct
+                # name (live test: same-type tracks without names raise).
+                script.append_track(jy.TrackSpec(jy.TrackType.video, name="overlays"))
+                added_overlays: list[str] = []
+                for ov in overlays:
+                    ov_path = Path(ov["path"])
+                    if not ov_path.exists():
+                        return ToolResult(success=False, error=f"overlay not found: {ov_path}")
+                    ov_mat = jy.VideoMaterial(str(ov_path))
+                    ov_seg = jy.VideoSegment(
+                        ov_mat,
+                        target_timerange=jy.trange(
+                            us(_rational_seconds(ov["start"])),
+                            us(_rational_seconds(ov["duration"])),
+                        ),
+                    )
+                    script.add_segment(ov_seg, track="overlays")
+                    added_overlays.append(str(ov_path))
+                applied["overlays"] = added_overlays
 
             script.save()
         except Exception as exc:

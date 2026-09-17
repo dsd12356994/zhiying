@@ -7,6 +7,7 @@ import { ParticleBurst } from "./effects/three/ParticleBurst";
 import { ShaderTransition } from "./effects/shaders/ShaderTransition";
 import { VideoClip } from "./scenes/VideoClip";
 import { VideoTransition } from "./effects/shaders/VideoTransition";
+import { StatCard } from "./scenes/StatCard";
 
 const renderCut = (cut: Cut): React.ReactElement => {
   switch (cut.type) {
@@ -22,6 +23,8 @@ const renderCut = (cut: Cut): React.ReactElement => {
       return <VideoClip {...cut} />;
     case "video_transition":
       return <VideoTransition {...cut} />;
+    case "stat_card":
+      return <StatCard {...cut} />;
     default: {
       const neverCut: never = cut;
       throw new Error(`Unhandled cut type: ${JSON.stringify(neverCut)}`);
@@ -29,10 +32,10 @@ const renderCut = (cut: Cut): React.ReactElement => {
   }
 };
 
-export const SceneRenderer: React.FC<CompositionProps> = ({ cuts }) => {
+export const SceneRenderer: React.FC<CompositionProps> = ({ cuts, transparent }) => {
   let from = 0;
   return (
-    <AbsoluteFill style={{ backgroundColor: "#000" }}>
+    <AbsoluteFill style={{ backgroundColor: transparent ? "transparent" : "#000" }}>
       {cuts.map((cut, index) => {
         const sequence = (
           <Sequence key={index} from={from} durationInFrames={cut.durationInFrames}>

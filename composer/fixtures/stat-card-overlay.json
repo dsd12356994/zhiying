@@ -1,0 +1,16 @@
+{
+  "fps": 30,
+  "width": 720,
+  "height": 1280,
+  "transparent": true,
+  "cuts": [
+    {
+      "type": "stat_card",
+      "durationInFrames": 90,
+      "value": "73%",
+      "label": "胜率 WIN RATE",
+      "accent": "#7dd3fc",
+      "position": "bottom-left"
+    }
+  ]
+}
