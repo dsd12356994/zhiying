@@ -172,20 +172,22 @@ class LLMClient:
             raw=data,
         )
 
-    def complete_json(self, messages: list[dict[str, str]], temperature: float = 0.2) -> tuple[dict[str, Any], LLMResponse]:
+    def complete_json(self, messages: list[dict[str, str]], temperature: float = 0.2, think: bool | None = None) -> tuple[Any, LLMResponse]:
         """complete() + tolerant JSON extraction. Models wrap JSON in prose
         or fences often enough that a strict json.loads is not enough; we
-        take the outermost {...} block and parse that. Raises LLMError with
-        the raw text if nothing parses -- the caller (agent) decides what to
-        do, we don't invent a fallback."""
-        resp = self.complete(messages, temperature=temperature)
+        take the outermost {...} or [...] block (arrays happen too -- the
+        storyboard prompt returns one, live 2026-09-19) and parse that.
+        Raises LLMError with the raw text if nothing parses -- the caller
+        (agent) decides what to do, we don't invent a fallback."""
+        resp = self.complete(messages, temperature=temperature, think=think)
         text = resp.text.strip()
         if text.startswith("```"):
             text = text.split("```")[1] if "```" in text[3:] else text[3:]
             text = text.lstrip("json").strip()
-        start, end = text.find("{"), text.rfind("}")
+        start = min((i for i in (text.find("{"), text.find("[")) if i != -1), default=-1)
+        end = max(text.rfind("}"), text.rfind("]"))
         if start == -1 or end == -1 or end <= start:
-            raise LLMError(f"model returned no JSON object. Raw text:\n{resp.text[:800]}")
+            raise LLMError(f"model returned no JSON object/array. Raw text:\n{resp.text[:800]}")
         try:
             return json.loads(text[start : end + 1]), resp
         except json.JSONDecodeError as exc:

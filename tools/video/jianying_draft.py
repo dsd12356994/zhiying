@@ -79,6 +79,7 @@ class JianyingDraftTool(BaseTool):
         transition: str | None = None,
         fade: str | None = None,
         overlays: list[dict[str, Any]] | None = None,
+        audios: list[dict[str, Any]] | None = None,
     ) -> ToolResult:
         """segments: same shape as otio_timeline's (source_start/duration in
         rational seconds). draft_folder defaults to the local 剪映 draft
@@ -138,16 +139,13 @@ class JianyingDraftTool(BaseTool):
                     jy.TrackType.video if video else jy.TrackType.audio
                 )
             )
-            if video:
-                material = jy.VideoMaterial(str(media_path))
-                make_segment = lambda target, source: jy.VideoSegment(  # noqa: E731
-                    material, target_timerange=target, source_timerange=source
-                )
-            else:
-                material = jy.AudioMaterial(str(media_path))
-                make_segment = lambda target, source: jy.AudioSegment(  # noqa: E731
-                    material, target_timerange=target, source_timerange=source
-                )
+
+            # Per-segment media: a segment may carry its own "media" path
+            # (multi-clip main track — e.g. one MiniMax clip per concept);
+            # otherwise all segments reference the shared media_path.
+            def _seg_media(seg: dict[str, Any]) -> Path:
+                m = seg.get("media")
+                return Path(m) if m else media_path
 
             timeline_cursor = Fraction(0)
             video_clips: list[Any] = []
@@ -155,17 +153,31 @@ class JianyingDraftTool(BaseTool):
             for seg in segments:
                 dur = _rational_seconds(seg["duration"])
                 src = _rational_seconds(seg["source_start"])
-                clip = make_segment(
-                    jy.trange(us(timeline_cursor), us(dur)),
-                    jy.trange(us(src), us(dur)),
-                )
+                # source_duration (media range) may differ from duration
+                # (timeline): e.g. a 6s clip stretched (auto speed) to
+                # cover a 7.2s narration. Defaults to duration.
+                src_dur = _rational_seconds(seg.get("source_duration", str(dur)))
+                seg_media = _seg_media(seg)
+                source_tr = jy.trange(us(src), us(src_dur))
+                target_tr = jy.trange(us(timeline_cursor), us(dur))
                 if video:
+                    clip = jy.VideoSegment(
+                        jy.VideoMaterial(str(seg_media)),
+                        target_timerange=target_tr,
+                        source_timerange=source_tr,
+                    )
                     if fade:
                         clip.add_fade(fade, fade)
                     if transition and video_clips:
                         clip.add_transition(
                             jy.TransitionType[transition], duration=transition_dur
                         )
+                else:
+                    clip = jy.AudioSegment(
+                        jy.AudioMaterial(str(seg_media)),
+                        target_timerange=target_tr,
+                        source_timerange=source_tr,
+                    )
                 script.add_segment(clip)
                 video_clips.append(clip)
                 timeline_cursor += dur
@@ -231,6 +243,35 @@ class JianyingDraftTool(BaseTool):
                     script.add_segment(ov_seg, track="overlays")
                     added_overlays.append(str(ov_path))
                 applied["overlays"] = added_overlays
+            if audios:
+                # Narration/music track: [{"path", "start", "duration"?}]
+                # (timeline coords, rational seconds; duration probed via
+                # ffprobe when omitted).
+                script.append_track(jy.TrackSpec(jy.TrackType.audio, name="narration"))
+                added_audio: list[str] = []
+                for a in audios:
+                    a_path = Path(a["path"])
+                    if not a_path.exists():
+                        return ToolResult(success=False, error=f"audio not found: {a_path}")
+                    a_dur = a.get("duration")
+                    if a_dur is None:
+                        probe = subprocess.run(
+                            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                             "-of", "csv=p=0", str(a_path)],
+                            capture_output=True, text=True,
+                        )
+                        if probe.returncode != 0 or not probe.stdout.strip():
+                            return ToolResult(success=False, error=f"cannot probe duration of {a_path}")
+                        a_dur = str(round(float(probe.stdout.strip()), 3))
+                    a_seg = jy.AudioSegment(
+                        jy.AudioMaterial(str(a_path)),
+                        target_timerange=jy.trange(
+                            us(_rational_seconds(a["start"])), us(_rational_seconds(a_dur))
+                        ),
+                    )
+                    script.add_segment(a_seg, track="narration")
+                    added_audio.append(str(a_path))
+                applied["audios"] = added_audio
 
             script.save()
         except Exception as exc:
