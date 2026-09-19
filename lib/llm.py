@@ -137,7 +137,7 @@ class LLMClient:
         return models[0]
 
     # -- the one call surface ----------------------------------------------
-    def complete(self, messages: list[dict[str, str]], temperature: float = 0.4) -> LLMResponse:
+    def complete(self, messages: list[dict[str, str]], temperature: float = 0.4, think: bool | None = None) -> LLMResponse:
         if self.provider == "ollama":
             payload = {
                 "model": self.model,
@@ -145,6 +145,12 @@ class LLMClient:
                 "stream": False,
                 "options": {"temperature": temperature},
             }
+            # Ollama >=0.9 accepts "think" for thinking-capable models
+            # (qwen3 etc.). None = leave the server default; False = skip
+            # chain-of-thought for long authoring jobs where it only burns
+            # minutes (added for the review-audio run, 2026-09-19).
+            if think is not None:
+                payload["think"] = think
             data = _post_json(f"{self.ollama_host}/api/chat", payload, {}, self.timeout)
             text = (data.get("message") or {}).get("content", "")
             return LLMResponse(text=text, model=self.model, provider="ollama", raw=data)
